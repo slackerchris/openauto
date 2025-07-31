@@ -5,6 +5,7 @@
 #include <QTextStream>
 #include <fstream>
 #include <QNetworkInterface>
+#include <f1x/openauto/Common/ErrorHandler.hpp>
 
 namespace f1x
 {
@@ -50,14 +51,9 @@ void ConnectDialog::onConnectButtonClicked()
     const auto& ipAddress = ui_->lineEditIPAddress->text().toStdString();
     auto socket = std::make_shared<boost::asio::ip::tcp::socket>(ioService_);
     ui_->progressBarConnect->show();
-    try
-    {
+    common::ErrorHandler::safeExecute([&]() {
         tcpWrapper_.asyncConnect(*socket, ipAddress, 5277, std::bind(&ConnectDialog::connectHandler, this, std::placeholders::_1, ipAddress, socket));
-    }
-    catch(const boost::system::system_error& se)
-    {
-        emit connectionFailed(QString(se.what()));
-    }
+    }, "[ConnectDialog]", "onConnectButtonClicked");
 }
 
 void ConnectDialog::onUpdateButtonClicked()
@@ -151,14 +147,9 @@ void ConnectDialog::loadClientList()
                 const auto& ipAddress = ui_->lineEditIPAddress->text().toStdString();
                 auto socket = std::make_shared<boost::asio::ip::tcp::socket>(ioService_);
                 ui_->progressBarConnect->show();
-                try
-                {
+                common::ErrorHandler::safeExecute([&]() {
                     tcpWrapper_.asyncConnect(*socket, ipAddress, 5277, std::bind(&ConnectDialog::connectHandler, this, std::placeholders::_1, ipAddress, socket));
-                }
-                catch(const boost::system::system_error& se)
-                {
-                    emit connectionFailed(QString(se.what()));
-                }
+                }, "[ConnectDialog]", "loadClientList - hotspot");
             }
         } else {
             ui_->lineEditIPAddress->setText("");
@@ -180,14 +171,9 @@ void ConnectDialog::loadClientList()
                     const auto& ipAddress = ui_->lineEditIPAddress->text().toStdString();
                     auto socket = std::make_shared<boost::asio::ip::tcp::socket>(ioService_);
                     ui_->progressBarConnect->show();
-                    try
-                    {
+                    common::ErrorHandler::safeExecute([&]() {
                         tcpWrapper_.asyncConnect(*socket, ipAddress, 5277, std::bind(&ConnectDialog::connectHandler, this, std::placeholders::_1, ipAddress, socket));
-                    }
-                    catch(const boost::system::system_error& se)
-                    {
-                        emit connectionFailed(QString(se.what()));
-                    }
+                    }, "[ConnectDialog]", "loadClientList - wifi");
                 }
             }
         } else {

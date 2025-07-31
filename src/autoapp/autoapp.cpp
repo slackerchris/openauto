@@ -18,6 +18,7 @@
 
 #include <thread>
 #include <QApplication>
+#include <f1x/openauto/Common/ErrorHandler.hpp>
 #include <QScreen>
 #include <QDesktopWidget>
 #include <aasdk/USB/USBHub.hpp>
@@ -42,7 +43,12 @@
 #include <f1x/openauto/autoapp/UI/UpdateDialog.hpp>
 #include <f1x/openauto/Common/Log.hpp>
 
+namespace f1x::openauto::autoapp {
+namespace common = f1x::openauto::common;
+}
+
 namespace autoapp = f1x::openauto::autoapp;
+namespace common = f1x::openauto::common;
 using ThreadPool = std::vector<std::thread>;
 
 void startUSBWorkers(boost::asio::io_service& ioService, libusb_context* usbContext, ThreadPool& threadPool)
@@ -78,14 +84,12 @@ void configureLogging() {
     const std::string logIni = "openauto-logs.ini";
     std::ifstream logSettings(logIni);
     if (logSettings.good()) {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
             // For boost < 1.71 the severity types are not automatically parsed so lets register them.
             boost::log::register_simple_filter_factory<boost::log::trivial::severity_level>("Severity");
             boost::log::register_simple_formatter_factory<boost::log::trivial::severity_level, char>("Severity");
             boost::log::init_from_stream(logSettings);
-        } catch (std::exception const & e) {
-            OPENAUTO_LOG(warning) << "[OpenAuto] " << logIni << " was provided but was not valid.";
-        }
+        }, "[OpenAuto]", "Logging configuration");
     }
 }
 
@@ -253,55 +257,31 @@ int main(int argc, char* argv[])
 
     QObject::connect(&mainWindow, &autoapp::ui::MainWindow::TriggerAppStart, [&app]() {
         OPENAUTO_LOG(debug) << "[AutoApp] TriggerAppStart: Manual start android auto.";
-        try {
+        common::ErrorHandler::safeExecute([&]() {
             app->disableAutostartEntity = false;
             app->resume();
             app->waitForUSBDevice();
-        } catch (const aasdk::error::Error& e) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - aasdk error: " << e.what();
-        } catch (const std::exception& e) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - standard exception: " << e.what();
-        } catch (...) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - unknown exception in app startup";
-        }
+        }, "[AutoApp]", "TriggerAppStart");
     });
 
     QObject::connect(&mainWindow, &autoapp::ui::MainWindow::TriggerAppStop, [&app]() {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
             if (std::ifstream("/tmp/android_device")) {
                 OPENAUTO_LOG(debug) << "[AutoApp] TriggerAppStop: Manual stop usb android auto.";
                 app->disableAutostartEntity = true;
                 system("/usr/local/bin/autoapp_helper usbreset");
                 usleep(500000);
-                try {
+                common::ErrorHandler::safeExecute([&]() {
                     app->stop();
-                } catch (const aasdk::error::Error& e) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - aasdk error during stop: " << e.what();
-                } catch (const std::exception& e) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception during stop: " << e.what();
-                } catch (...) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception during stop";
-                }
+                }, "[AutoApp]", "TriggerAppStop - USB stop");
 
             } else {
                 OPENAUTO_LOG(debug) << "[AutoApp] TriggerAppStop: Manual stop wifi android auto.";
-                try {
+                common::ErrorHandler::safeExecute([&]() {
                     app->onAndroidAutoQuit();
-                } catch (const aasdk::error::Error& e) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - aasdk error during quit: " << e.what();
-                } catch (const std::exception& e) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception during quit: " << e.what();
-                } catch (...) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception during quit";
-                }
+                }, "[AutoApp]", "TriggerAppStop - WiFi quit");
             }
-        } catch (const std::ios_base::failure& e) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - file system error: " << e.what();
-        } catch (const std::exception& e) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception: " << e.what();
-        } catch (...) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception in manual stop";
-        }
+        }, "[AutoApp]", "TriggerAppStop");
     });
 
     QObject::connect(&mainWindow, &autoapp::ui::MainWindow::CloseAllDialogs, [&settingsWindow, &connectdialog, &updatedialog, &warningdialog]() {

@@ -21,6 +21,7 @@
 #include <aasdk/TCP/TCPEndpoint.hpp>
 #include <f1x/openauto/autoapp/App.hpp>
 #include <f1x/openauto/Common/Log.hpp>
+#include <f1x/openauto/Common/ErrorHandler.hpp>
 
 namespace f1x::openauto::autoapp {
 
@@ -37,32 +38,13 @@ namespace f1x::openauto::autoapp {
 
   void App::waitForUSBDevice() {
     strand_.dispatch([this, self = this->shared_from_this()]() {
-      try {
+      common::ErrorHandler::safeExecute([this]() {
         this->waitForDevice();
-      }
-      catch (const aasdk::error::Error& e) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - aasdk error in waitForDevice(): " << e.what();
-      }
-      catch (const std::exception& e) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - standard exception in waitForDevice(): " << e.what();
-      }
-      catch (...) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - unknown exception in waitForDevice()";
-      }
+      }, "[App]", "waitForUSBDevice - waitForDevice");
       
-      try {
+      common::ErrorHandler::safeExecute([this]() {
         this->enumerateDevices();
-      }
-      catch (const aasdk::error::Error& e) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - aasdk error in enumerateDevices(): " << e.what();
-      }
-      catch (const std::exception& e) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - standard exception in enumerateDevices(): " << e.what();
-      }
-      catch (...) {
-        OPENAUTO_LOG(error) << "[App] waitForUSBDevice() - unknown exception in enumerateDevices()";
-      }
-
+      }, "[App]", "waitForUSBDevice - enumerateDevices");
     });
   }
 
@@ -70,22 +52,12 @@ namespace f1x::openauto::autoapp {
     strand_.dispatch([this, self = this->shared_from_this(), socket = std::move(socket)]() mutable {
       OPENAUTO_LOG(info) << "Start from socket";
       if (androidAutoEntity_ != nullptr) {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_->stop();
-        } catch (const aasdk::error::Error& e) {
-          OPENAUTO_LOG(error) << "[App] start() - aasdk error stopping androidAutoEntity: " << e.what();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] start() - standard exception stopping androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] start() - unknown exception stopping androidAutoEntity";
-        }
-        try {
+        }, "[App]", "start - stop existing entity");
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_.reset();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] start() - standard exception resetting androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] start() - unknown exception resetting androidAutoEntity";
-        }
+        }, "[App]", "start - reset existing entity");
       }
 
       try {
@@ -108,43 +80,21 @@ namespace f1x::openauto::autoapp {
   void App::stop() {
     strand_.dispatch([this, self = this->shared_from_this()]() {
       isStopped_ = true;
-      try {
+      common::ErrorHandler::safeExecute([&]() {
         connectedAccessoriesEnumerator_->cancel();
-      } catch (const aasdk::error::Error& e) {
-        OPENAUTO_LOG(error) << "[App] stop() - aasdk error canceling connectedAccessoriesEnumerator: " << e.what();
-      } catch (const std::exception& e) {
-        OPENAUTO_LOG(error) << "[App] stop() - standard exception canceling connectedAccessoriesEnumerator: " << e.what();
-      } catch (...) {
-        OPENAUTO_LOG(error) << "[App] stop() - unknown exception canceling connectedAccessoriesEnumerator";
-      }
+      }, "[App]", "stop - cancel connectedAccessoriesEnumerator");
       
-      try {
+      common::ErrorHandler::safeExecute([&]() {
         usbHub_->cancel();
-      } catch (const aasdk::error::Error& e) {
-        OPENAUTO_LOG(error) << "[App] stop() - aasdk error canceling usbHub: " << e.what();
-      } catch (const std::exception& e) {
-        OPENAUTO_LOG(error) << "[App] stop() - standard exception canceling usbHub: " << e.what();
-      } catch (...) {
-        OPENAUTO_LOG(error) << "[App] stop() - unknown exception canceling usbHub";
-      }
+      }, "[App]", "stop - cancel usbHub");
 
       if (androidAutoEntity_ != nullptr) {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_->stop();
-        } catch (const aasdk::error::Error& e) {
-          OPENAUTO_LOG(error) << "[App] stop() - aasdk error stopping androidAutoEntity: " << e.what();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] stop() - standard exception stopping androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] stop() - unknown exception stopping androidAutoEntity";
-        }
-        try {
+        }, "[App]", "stop - stop androidAutoEntity");
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_.reset();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] stop() - standard exception resetting androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] stop() - unknown exception resetting androidAutoEntity";
-        }
+        }, "[App]", "stop - reset androidAutoEntity");
       }
     });
 
@@ -245,34 +195,18 @@ namespace f1x::openauto::autoapp {
       //acceptor_.close();
 
       if (androidAutoEntity_ != nullptr) {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_->stop();
-        } catch (const aasdk::error::Error& e) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - aasdk error stopping androidAutoEntity: " << e.what();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - standard exception stopping androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - unknown exception stopping androidAutoEntity";
-        }
-        try {
+        }, "[App]", "onAndroidAutoQuit - stop androidAutoEntity");
+        common::ErrorHandler::safeExecute([&]() {
           androidAutoEntity_.reset();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - standard exception resetting androidAutoEntity: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - unknown exception resetting androidAutoEntity";
-        }
+        }, "[App]", "onAndroidAutoQuit - reset androidAutoEntity");
       }
 
       if (!isStopped_) {
-        try {
+        common::ErrorHandler::safeExecute([&]() {
           this->waitForDevice();
-        } catch (const aasdk::error::Error& e) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - aasdk error in waitForDevice: " << e.what();
-        } catch (const std::exception& e) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - standard exception in waitForDevice: " << e.what();
-        } catch (...) {
-          OPENAUTO_LOG(error) << "[App] onAndroidAutoQuit() - unknown exception in waitForDevice";
-        }
+        }, "[App]", "onAndroidAutoQuit - waitForDevice");
       }
     });
   }
