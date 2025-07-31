@@ -72,8 +72,12 @@ namespace f1x {
               messenger_->stop();
               transport_->stop();
               cryptor_->deinit();
+            } catch (const aasdk::error::Error& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] stop() - aasdk error during shutdown: " << e.what();
+            } catch (const std::exception& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] stop() - standard exception during shutdown: " << e.what();
             } catch (...) {
-              OPENAUTO_LOG(error) << "[AndroidAutoEntity] stop() - exception when stopping.";
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] stop() - unknown exception during shutdown";
             }
           });
         }
@@ -85,8 +89,12 @@ namespace f1x {
             try {
               std::for_each(serviceList_.begin(), serviceList_.end(),
                             std::bind(&IService::pause, std::placeholders::_1));
+            } catch (const aasdk::error::Error& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] pause() - aasdk error during pause: " << e.what();
+            } catch (const std::exception& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] pause() - standard exception during pause: " << e.what();
             } catch (...) {
-              OPENAUTO_LOG(error) << "[AndroidAutoEntity] pause() - exception when pausing.";
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] pause() - unknown exception during pause";
             }
           });
         }
@@ -98,8 +106,12 @@ namespace f1x {
             try {
               std::for_each(serviceList_.begin(), serviceList_.end(),
                             std::bind(&IService::resume, std::placeholders::_1));
+            } catch (const aasdk::error::Error& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] resume() - aasdk error during resume: " << e.what();
+            } catch (const std::exception& e) {
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] resume() - standard exception during resume: " << e.what();
             } catch (...) {
-              OPENAUTO_LOG(error) << "[AndroidAutoEntity] resume() exception when resuming.";
+              OPENAUTO_LOG(error) << "[AndroidAutoEntity] resume() - unknown exception during resume";
             }
           });
         }

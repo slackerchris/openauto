@@ -18,6 +18,7 @@
 
 #include <fstream>
 #include <f1x/openauto/autoapp/Service/MediaSink/VideoMediaSinkService.hpp>
+#include <f1x/openauto/Common/ErrorHandler.hpp>
 
 namespace f1x {
   namespace openauto {
@@ -206,13 +207,11 @@ namespace f1x {
                 aap_protobuf::service::media::video::message::VideoFocusMode::VIDEO_FOCUS_NATIVE) {
               // Return to OS
               OPENAUTO_LOG(info) << "[VideoMediaSinkService] Returning to OS.";
-              try {
+              common::ErrorHandler::safeExecute([&]() {
                 if (!std::ifstream("/tmp/entityexit")) {
                   std::ofstream("/tmp/entityexit");
                 }
-              } catch (...) {
-                OPENAUTO_LOG(error) << "[VideoMediaSinkService] Error in creating /tmp/entityexit";
-              }
+              }, "[VideoMediaSinkService]", "creating entityexit file");
             }
 
             this->sendVideoFocusIndication();

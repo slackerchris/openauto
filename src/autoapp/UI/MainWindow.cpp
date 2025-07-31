@@ -1301,13 +1301,26 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
                 ui_->labelCurrentPlaying->setFont(_font);
             }
         }
+    } catch (const std::bad_alloc& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::metaDataChanged] Memory allocation error in mp3list metadata: " << e.what();
+        // Fall back to player metadata
+    } catch (const std::out_of_range& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::metaDataChanged] Index out of range in mp3list metadata: " << e.what();
+        // Fall back to player metadata  
+    } catch (const std::exception& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::metaDataChanged] Standard exception in mp3list metadata: " << e.what();
+        // Fall back to player metadata
     } catch (...) {
-        // use metadata from player
-        QString AlbumInterpret = player->metaData(QMediaMetaData::AlbumArtist).toString();
-        QString Title = player->metaData(QMediaMetaData::Title).toString();
+        OPENAUTO_LOG(error) << "[MainWindow::metaDataChanged] Unknown exception in mp3list metadata - falling back to player metadata";
+        // Fall back to player metadata
+    }
+    
+    // Fallback: use metadata from player
+    QString AlbumInterpret = player->metaData(QMediaMetaData::AlbumArtist).toString();
+    QString Title = player->metaData(QMediaMetaData::Title).toString();
 
-        if (AlbumInterpret == "" && ui_->comboBoxAlbum->currentText() != ".") {
-            AlbumInterpret = ui_->comboBoxAlbum->currentText();
+    if (AlbumInterpret == "" && ui_->comboBoxAlbum->currentText() != ".") {
+        AlbumInterpret = ui_->comboBoxAlbum->currentText();
         }
         QString currentPlaying;
 

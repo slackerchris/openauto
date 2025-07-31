@@ -253,8 +253,12 @@ int main(int argc, char* argv[])
             app->disableAutostartEntity = false;
             app->resume();
             app->waitForUSBDevice();
+        } catch (const aasdk::error::Error& e) {
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - aasdk error: " << e.what();
+        } catch (const std::exception& e) {
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - standard exception: " << e.what();
         } catch (...) {
-            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart: app->waitForUSBDevice();";
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStart - unknown exception in app startup";
         }
     });
 
@@ -267,23 +271,32 @@ int main(int argc, char* argv[])
                 usleep(500000);
                 try {
                     app->stop();
-                    //app->pause();
+                } catch (const aasdk::error::Error& e) {
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - aasdk error during stop: " << e.what();
+                } catch (const std::exception& e) {
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception during stop: " << e.what();
                 } catch (...) {
-                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop: stop();";
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception during stop";
                 }
 
             } else {
                 OPENAUTO_LOG(debug) << "[AutoApp] TriggerAppStop: Manual stop wifi android auto.";
                 try {
                     app->onAndroidAutoQuit();
-                    //app->pause();
+                } catch (const aasdk::error::Error& e) {
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - aasdk error during quit: " << e.what();
+                } catch (const std::exception& e) {
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception during quit: " << e.what();
                 } catch (...) {
-                    OPENAUTO_LOG(error) << "[Autoapp] TriggerAppStop: stop();";
+                    OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception during quit";
                 }
-
             }
+        } catch (const std::ios_base::failure& e) {
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - file system error: " << e.what();
+        } catch (const std::exception& e) {
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - standard exception: " << e.what();
         } catch (...) {
-            OPENAUTO_LOG(error) << "[AutoApp] Exception in manual stop android auto.";
+            OPENAUTO_LOG(error) << "[AutoApp] TriggerAppStop - unknown exception in manual stop";
         }
     });
 
