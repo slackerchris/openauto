@@ -28,12 +28,10 @@ namespace f1x {
         namespace mediabrowser {
 
           MediaBrowserService::MediaBrowserService(boost::asio::io_service &ioService,
-                                                       aasdk::messenger::IMessenger::Pointer messenger)
-              : strand_(ioService),
-                timer_(ioService),
-                channel_(std::make_shared<aasdk::channel::mediabrowser::MediaBrowserService>(strand_, std::move(messenger))) {
-
-          }
+                                                   aasdk::messenger::IMessenger::Pointer messenger)
+              : timer_(ioService),
+                strand_(ioService),
+                channel_(std::make_shared<aasdk::channel::mediabrowser::MediaBrowserService>(strand_, std::move(messenger))) {          }
 
           void MediaBrowserService::start() {
             strand_.dispatch([this, self = this->shared_from_this()]() {

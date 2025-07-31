@@ -32,7 +32,7 @@ namespace f1x::openauto::autoapp::service::bluetooth {
 
   void BluetoothService::start() {
     strand_.dispatch([this, self = this->shared_from_this()]() {
-      OPENAUTO_LOG(info) << "[BluetoothService] start()";
+      OPENAUTO_LOG(info) << "[BluetoothService] Service started, awaiting connections";
       channel_->receive(this->shared_from_this());
     });
   }

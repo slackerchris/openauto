@@ -79,14 +79,20 @@ void QtVideoOutput::onStartPlayback()
     mediaPlayer_->setMedia(QMediaContent(), &videoBuffer_);
     mediaPlayer_->play();
 
-    // TODO: This only outputs a line if there's an error - FIXME - Output a proper status instead
-    OPENAUTO_LOG(debug) << "Player error state -> " << mediaPlayer_->errorString().toStdString();
+    // Improved logging with proper status reporting
+    if (mediaPlayer_->error() == QMediaPlayer::NoError) {
+        OPENAUTO_LOG(info) << "[QtVideoOutput] Video playback started successfully";
+    } else {
+        OPENAUTO_LOG(error) << "[QtVideoOutput] Video playback failed: " << mediaPlayer_->errorString().toStdString();
+    }
 }
 
 void QtVideoOutput::onStopPlayback()
 {
+    OPENAUTO_LOG(debug) << "[QtVideoOutput] Stopping video playback";
     videoWidget_->hide();
     mediaPlayer_->stop();
+    OPENAUTO_LOG(debug) << "[QtVideoOutput] Video playback stopped";
 }
 
 }

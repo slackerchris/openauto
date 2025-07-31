@@ -29,10 +29,10 @@ namespace f1x::openauto::autoapp {
            service::IAndroidAutoEntityFactory &androidAutoEntityFactory,
            aasdk::usb::IUSBHub::Pointer usbHub,
            aasdk::usb::IConnectedAccessoriesEnumerator::Pointer connectedAccessoriesEnumerator)
-      : ioService_(ioService), usbWrapper_(usbWrapper), tcpWrapper_(tcpWrapper), strand_(ioService_),
+      : ioService_(ioService), usbWrapper_(usbWrapper), tcpWrapper_(tcpWrapper), 
+        acceptor_(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 5000)), strand_(ioService_),
         androidAutoEntityFactory_(androidAutoEntityFactory), usbHub_(std::move(usbHub)),
-        connectedAccessoriesEnumerator_(std::move(connectedAccessoriesEnumerator)),
-        acceptor_(ioService, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 5000)), isStopped_(false) {
+        connectedAccessoriesEnumerator_(std::move(connectedAccessoriesEnumerator)), isStopped_(false) {
 
   }
 

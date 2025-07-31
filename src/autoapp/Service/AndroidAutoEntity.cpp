@@ -40,12 +40,12 @@ namespace f1x {
         }
 
         AndroidAutoEntity::~AndroidAutoEntity() {
-          OPENAUTO_LOG(debug) << "[AndroidAutoEntity] destroy.";
+          OPENAUTO_LOG(debug) << "[AndroidAutoEntity] Entity destroyed";
         }
 
         void AndroidAutoEntity::start(IAndroidAutoEntityEventHandler &eventHandler) {
           strand_.dispatch([this, self = this->shared_from_this(), eventHandler = &eventHandler]() {
-            OPENAUTO_LOG(info) << "[AndroidAutoEntity] start()";
+            OPENAUTO_LOG(info) << "[AndroidAutoEntity] Starting Android Auto entity";
 
             eventHandler_ = eventHandler;
             std::for_each(serviceList_.begin(), serviceList_.end(), std::bind(&IService::start, std::placeholders::_1));
