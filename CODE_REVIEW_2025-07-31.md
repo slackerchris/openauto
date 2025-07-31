@@ -110,10 +110,11 @@ OpenAuto is an AndroidAuto™ headunit emulator based on the aasdk library and Q
 - **Release Management**: Detailed release notes showing active development (v4.1.0 - Nov 2024)
 - **Build Configuration**: Well-structured CMake with proper version management
 
-### Improvement Areas 📝
+### Areas for Improvement 📝
 - Cross-platform build instructions could be more detailed
 - Missing comprehensive dependency version requirements
 - Could benefit from API documentation
+- **Build System Dependencies**: Missing dependency installation guide for development environments
 
 ---
 
@@ -289,6 +290,8 @@ QString brightnessFilename = "/sys/class/backlight/rpi_backlight/brightness";
 - **Dependency Versions**: Could specify minimum required versions
 - **Build Options**: More granular feature toggles
 - **Testing Integration**: Missing test framework integration
+- **Development Setup**: Missing comprehensive development environment setup guide
+- **External Dependencies**: Requires pre-built aasdk and aap_protobuf libraries not available in standard package managers
 
 ---
 
