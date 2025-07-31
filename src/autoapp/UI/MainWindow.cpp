@@ -1321,8 +1321,8 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
 
     if (AlbumInterpret == "" && ui_->comboBoxAlbum->currentText() != ".") {
         AlbumInterpret = ui_->comboBoxAlbum->currentText();
-        }
-        QString currentPlaying;
+    }
+    QString currentPlaying;
 
         if (AlbumInterpret != "") {
             currentPlaying.append(AlbumInterpret);
@@ -1334,7 +1334,7 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
             currentPlaying.append(Title);
         }
         ui_->labelCurrentPlaying->setText(currentPlaying);
-    }
+    
     ui_->labelTrack->setText(QString::number(playlist->currentIndex()+1));
     ui_->labelTrackCount->setText(QString::number(playlist->mediaCount()));
 
