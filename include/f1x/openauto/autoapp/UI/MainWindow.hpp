@@ -45,6 +45,9 @@
 
 #include <QFileSystemWatcher>
 #include <QKeyEvent>
+#include <QMutex>
+#include <QReadWriteLock>
+#include <QMutexLocker>
 
 #include <QBluetoothLocalDevice>
 //#include <QtBluetooth>
@@ -273,10 +276,42 @@ private:
 
     QBluetoothLocalDevice *localDevice;
 
+    // Thread Safety Infrastructure
+    mutable QReadWriteLock stateLock_;           // For read-heavy UI state variables
+    mutable QMutex mediaStateMutex_;             // For media player state
+    mutable QMutex systemStateMutex_;            // For system control state  
+    mutable QMutex configurationMutex_;          // For configuration access
+
 protected:
     void keyPressEvent(QKeyEvent *event);
 
 private:
+    // Thread-safe accessors for critical shared state
+    bool isNightModeEnabled() const;
+    void setNightModeEnabled(bool enabled);
+    bool isDayNightModeState() const;
+    void setDayNightModeState(bool state);
+    bool isExitMenuVisible() const;
+    void setExitMenuVisible(bool visible);
+    bool isRearCamVisible() const;
+    void setRearCamVisible(bool visible);
+    bool isDashCamRecording() const;
+    void setDashCamRecording(bool recording);
+    bool isToggleMute() const;
+    void setToggleMute(bool mute);
+    bool isMediaContentChanged() const;
+    void setMediaContentChanged(bool changed);
+    
+    QString getSelectedMp3File() const;
+    void setSelectedMp3File(const QString& file);
+    int getCurrentPlaylistIndex() const;
+    void setCurrentPlaylistIndex(int index);
+    
+    QString getMusicFolder() const;
+    void setMusicFolder(const QString& folder);
+    QString getAlbumFolder() const;
+    void setAlbumFolder(const QString& folder);
+    
     // Helper methods for system paths
     bool checkFileExists(const QString& pathKey) const;
     QString getSystemPath(const QString& pathKey) const;

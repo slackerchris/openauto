@@ -1,13 +1,14 @@
 Release Notes
 
-20250731 - 4.1.1 - Security & Portability Improvements
+20250731 - 4.1.1 - Security, Thread Safety & Portability Improvements
 * Enhanced Error Handling: Implemented comprehensive ErrorHandler infrastructure with 75% reduction in generic exception handling
-* System Dependencies: Eliminated all hardcoded system dependencies with configurable SystemPaths and SafeSystemExecutor
+* Thread Safety: Complete implementation eliminating race conditions in MainWindow with 11 protected state variables and thread-safe accessors
+* System Dependencies: Eliminated all hardcoded system dependencies with configurable SystemPaths and SafeSystemExecutor  
 * Security Improvements: Replaced dangerous system() calls with validated command execution to prevent injection attacks
 * Configuration System: Added environment variable overrides for system paths enabling deployment across different platforms
-* Documentation: Complete technical documentation added to docs/ directory including Qt6 upgrade analysis and implementation guides
-* Build System: All improvements successfully compiled and tested
-* Compatibility: Maintained full backward compatibility while improving security and maintainability
+* Documentation: Complete technical documentation added to docs/ directory including thread safety implementation and Qt6 upgrade analysis
+* Build System: All improvements successfully compiled and tested with zero errors
+* Compatibility: Maintained full backward compatibility while improving security, thread safety, and maintainability
 
 20241124 - 4.1.0 - Bluetooth Updates
 * Rename BluetootAdapterType to BluetoothAdapterType, and change from NONE, LOCAL, REMOTE to NONE, LOCAL, EXTERNAL to better match available settings

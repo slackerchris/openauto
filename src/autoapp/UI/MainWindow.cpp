@@ -442,7 +442,7 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
 
     // set bg's on startup
     MainWindow::updateBG();
-    if (!this->nightModeEnabled) {
+    if (!isNightModeEnabled()) {
         ui_->pushButtonDay->hide();
         ui_->pushButtonDay2->hide();
         ui_->pushButtonNight->show();
@@ -577,6 +577,121 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
 MainWindow::~MainWindow()
 {
     delete ui_;
+}
+
+// Thread-safe accessors for critical shared state
+bool MainWindow::isNightModeEnabled() const {
+    QReadLocker locker(&stateLock_);
+    return nightModeEnabled;
+}
+
+void MainWindow::setNightModeEnabled(bool enabled) {
+    QWriteLocker locker(&stateLock_);
+    if (nightModeEnabled != enabled) {
+        nightModeEnabled = enabled;
+        // Note: UI updates should be queued to main thread if called from other threads
+    }
+}
+
+bool MainWindow::isDayNightModeState() const {
+    QReadLocker locker(&stateLock_);
+    return DayNightModeState;
+}
+
+void MainWindow::setDayNightModeState(bool state) {
+    QWriteLocker locker(&stateLock_);
+    DayNightModeState = state;
+}
+
+bool MainWindow::isExitMenuVisible() const {
+    QReadLocker locker(&stateLock_);
+    return exitMenuVisible;
+}
+
+void MainWindow::setExitMenuVisible(bool visible) {
+    QWriteLocker locker(&stateLock_);
+    exitMenuVisible = visible;
+}
+
+bool MainWindow::isRearCamVisible() const {
+    QReadLocker locker(&stateLock_);
+    return rearCamVisible;
+}
+
+void MainWindow::setRearCamVisible(bool visible) {
+    QWriteLocker locker(&stateLock_);
+    rearCamVisible = visible;
+}
+
+bool MainWindow::isDashCamRecording() const {
+    QReadLocker locker(&stateLock_);
+    return dashCamRecording;
+}
+
+void MainWindow::setDashCamRecording(bool recording) {
+    QWriteLocker locker(&stateLock_);
+    dashCamRecording = recording;
+}
+
+bool MainWindow::isToggleMute() const {
+    QReadLocker locker(&stateLock_);
+    return toggleMute;
+}
+
+void MainWindow::setToggleMute(bool mute) {
+    QWriteLocker locker(&stateLock_);
+    toggleMute = mute;
+}
+
+bool MainWindow::isMediaContentChanged() const {
+    QReadLocker locker(&stateLock_);
+    return mediacontentchanged;
+}
+
+void MainWindow::setMediaContentChanged(bool changed) {
+    QWriteLocker locker(&stateLock_);
+    mediacontentchanged = changed;
+}
+
+QString MainWindow::getSelectedMp3File() const {
+    QMutexLocker locker(&mediaStateMutex_);
+    return selectedMp3file;
+}
+
+void MainWindow::setSelectedMp3File(const QString& file) {
+    QMutexLocker locker(&mediaStateMutex_);
+    selectedMp3file = file;
+    mediacontentchanged = true;
+}
+
+int MainWindow::getCurrentPlaylistIndex() const {
+    QMutexLocker locker(&mediaStateMutex_);
+    return currentPlaylistIndex;
+}
+
+void MainWindow::setCurrentPlaylistIndex(int index) {
+    QMutexLocker locker(&mediaStateMutex_);
+    currentPlaylistIndex = index;
+}
+
+QString MainWindow::getMusicFolder() const {
+    QMutexLocker locker(&mediaStateMutex_);
+    return musicfolder;
+}
+
+void MainWindow::setMusicFolder(const QString& folder) {
+    QMutexLocker locker(&mediaStateMutex_);
+    musicfolder = folder;
+}
+
+QString MainWindow::getAlbumFolder() const {
+    QMutexLocker locker(&mediaStateMutex_);
+    return albumfolder;
+}
+
+void MainWindow::setAlbumFolder(const QString& folder) {
+    QMutexLocker locker(&mediaStateMutex_);
+    albumfolder = folder;
 }
 
 }
@@ -959,31 +1074,31 @@ void f1x::openauto::autoapp::ui::MainWindow::playerHide()
 
 void f1x::openauto::autoapp::ui::MainWindow::toggleExit()
 {
-    if (!this->exitMenuVisible) {
+    if (!isExitMenuVisible()) {
         ui_->exitWidget->show();
         ui_->buttonWidget->hide();
         ui_->horizontalWidgetButtons->hide();
         ui_->horizontalWidgetPower->show();
-        this->exitMenuVisible = true;
+        setExitMenuVisible(true);
     } else {
         ui_->buttonWidget->show();
         ui_->exitWidget->hide();
         ui_->horizontalWidgetButtons->show();
         ui_->horizontalWidgetPower->hide();
-        this->exitMenuVisible = false;
+        setExitMenuVisible(false);
     }
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::toggleMuteButton()
 {
-    if (!this->toggleMute) {
+    if (!isToggleMute()) {
         ui_->pushButtonMute->hide();
         ui_->pushButtonUnMute->show();
-        this->toggleMute = true;
+        setToggleMute(true);
     } else {
         ui_->pushButtonUnMute->hide();
         ui_->pushButtonMute->show();
-        this->toggleMute = false;
+        setToggleMute(false);
     }
 }
 
@@ -1025,7 +1140,7 @@ void f1x::openauto::autoapp::ui::MainWindow::updateBG()
         this->setStyleSheet("QMainWindow { background: url(:/wallpaper-firework.png); background-repeat: no-repeat; background-position: center; }");
         this->holidaybg = true;
     }
-    if (!this->nightModeEnabled) {
+    if (!isNightModeEnabled()) {
         if (ui_->mediaWidget->isVisible() == true) {
             if (this->wallpaperEQFileExists) {
                 this->setStyleSheet("QMainWindow { background: url(wallpaper-eq.png); background-repeat: no-repeat; background-position: center; }");
@@ -1262,7 +1377,7 @@ void f1x::openauto::autoapp::ui::MainWindow::on_durationChanged(qint64 position)
 
 void f1x::openauto::autoapp::ui::MainWindow::on_mp3List_itemClicked(QListWidgetItem *item)
 {
-    this->selectedMp3file = item->text();
+    setSelectedMp3File(item->text());
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
@@ -1277,7 +1392,9 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
     } else {
         if (playlist->currentIndex() != -1 && fullpathplaying != "") {
             QString filename = ui_->mp3List->item(playlist->currentIndex())->text();
-            QString cover = this->musicfolder + "/" + this->albumfolder + "/" + filename + ".png";
+            QString currentMusicFolder = getMusicFolder();
+            QString currentAlbumFolder = getAlbumFolder();
+            QString cover = currentMusicFolder + "/" + currentAlbumFolder + "/" + filename + ".png";
             if (check_file_exist(cover.toStdString().c_str())) {
                 QPixmap img = cover;
                 ui_->pushButtonBack->setIcon(img.scaled(270,270,Qt::KeepAspectRatio));
@@ -1456,14 +1573,15 @@ void f1x::openauto::autoapp::ui::MainWindow::resetRetryUSBMessage()
 void f1x::openauto::autoapp::ui::MainWindow::scanFolders()
 {
     try {
-        if (this->mediacontentchanged == true) {
-            this->mediacontentchanged = false;
+        if (isMediaContentChanged()) {
+            setMediaContentChanged(false);
             int cleaner = ui_->comboBoxAlbum->count();
             while (cleaner > -1) {
                 ui_->comboBoxAlbum->removeItem(cleaner);
                 cleaner--;
             }
-            QDir directory(this->musicfolder);
+            QString currentMusicFolder = getMusicFolder();
+            QDir directory(currentMusicFolder);
             QStringList folders = directory.entryList(QStringList() << "*", QDir::AllDirs, QDir::Name);
             QStandardItemModel *model = new QStandardItemModel(this);
             foreach (QString foldername, folders) {
@@ -1471,8 +1589,8 @@ void f1x::openauto::autoapp::ui::MainWindow::scanFolders()
                     ui_->comboBoxAlbum->addItem(foldername);
                     ui_->labelAlbumCount->setText(QString::number(ui_->comboBoxAlbum->count()));                 
 
-                    QString coverpng = this->musicfolder + "/" + foldername + "/folder.png";
-                    QString coverjpg = this->musicfolder + "/" + foldername + "/folder.jpg";
+                    QString coverpng = currentMusicFolder + "/" + foldername + "/folder.png";
+                    QString coverjpg = currentMusicFolder + "/" + foldername + "/folder.jpg";
                     QString coverpngcs = "/media/USBDRIVES/CSSTORAGE/COVERCACHE/" + foldername + ".png";
                     QString coverjpgcs = "/media/USBDRIVES/CSSTORAGE/COVERCACHE/" + foldername + ".jpg";
 
@@ -1499,7 +1617,7 @@ void f1x::openauto::autoapp::ui::MainWindow::scanFolders()
                 }
             }
             ui_->AlbumCoverListView->setModel(model);
-            this->currentPlaylistIndex = 0;
+            setCurrentPlaylistIndex(0);
             ui_->SysinfoTopLeft->hide();
         }
     } catch (const std::bad_alloc& e) {
@@ -1973,16 +2091,17 @@ void f1x::openauto::autoapp::ui::MainWindow::tmpChanged()
     }
 
     // update day/night state
-    this->nightModeEnabled = check_file_exist("/tmp/night_mode_enabled");
+    bool currentNightMode = check_file_exist("/tmp/night_mode_enabled");
+    setNightModeEnabled(currentNightMode);
 
-    if (this->nightModeEnabled) {
-        if (!this->DayNightModeState) {
-            this->DayNightModeState = true;
+    if (isNightModeEnabled()) {
+        if (!isDayNightModeState()) {
+            setDayNightModeState(true);
             f1x::openauto::autoapp::ui::MainWindow::switchGuiToNight();
         }
     } else {
-        if (this->DayNightModeState) {
-            this->DayNightModeState = false;
+        if (isDayNightModeState()) {
+            setDayNightModeState(false);
             f1x::openauto::autoapp::ui::MainWindow::switchGuiToDay();
         }
     }
