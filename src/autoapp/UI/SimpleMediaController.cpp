@@ -205,6 +205,32 @@ int SimpleMediaController::getVolume() const
     return player_ ? player_->volume() : 0;
 }
 
+qint64 SimpleMediaController::getDuration() const
+{
+    return player_ ? player_->duration() : 0;
+}
+
+QUrl SimpleMediaController::getCurrentMedia() const
+{
+    return player_ ? player_->currentMedia().request().url() : QUrl();
+}
+
+QVariant SimpleMediaController::getMetaData(const QString& key) const
+{
+    if (!player_) return QVariant();
+    
+    // Map string keys to QMediaMetaData keys for Qt5 compatibility
+    if (key == "CoverArtImage") {
+        return player_->metaData(QMediaMetaData::CoverArtImage);
+    } else if (key == "AlbumArtist") {
+        return player_->metaData(QMediaMetaData::AlbumArtist);
+    } else if (key == "Title") {
+        return player_->metaData(QMediaMetaData::Title);
+    }
+    
+    return QVariant();
+}
+
 void SimpleMediaController::onPositionChanged(qint64 position)
 {
     emit positionChanged(position);

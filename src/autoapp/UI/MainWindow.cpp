@@ -18,6 +18,7 @@
 
 #include <QApplication>
 #include <f1x/openauto/autoapp/UI/MainWindow.hpp>
+#include <f1x/openauto/autoapp/UI/SystemController.hpp>
 #include <QFileInfo>
 #include <QFile>
 #include "ui_mainwindow.h"
@@ -517,16 +518,22 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     // Hide recordings button
     ui_->pushButtonRecordings->hide();
 
-    player = new QMediaPlayer(this);
-    playlist = new QMediaPlaylist(this);
-    connect(player, &QMediaPlayer::positionChanged, this, &MainWindow::on_positionChanged);
-    connect(player, &QMediaPlayer::durationChanged, this, &MainWindow::on_durationChanged);
-    connect(player, &QMediaPlayer::metaDataAvailableChanged, this, &MainWindow::metaDataChanged);
-    connect(player, &QMediaPlayer::stateChanged, this, &MainWindow::on_StateChanged);
-
     // NEW: Initialize SimpleMediaController for step-by-step refactoring
     simpleMediaController = new SimpleMediaController(configuration_, this);
     OPENAUTO_LOG(info) << "[MainWindow] SimpleMediaController initialized for refactoring";
+    
+    // Connect SimpleMediaController signals to MainWindow slots
+    connect(simpleMediaController, &SimpleMediaController::positionChanged, this, &MainWindow::on_positionChanged);
+    connect(simpleMediaController, &SimpleMediaController::durationChanged, this, &MainWindow::on_durationChanged);
+    connect(simpleMediaController, &SimpleMediaController::metaDataChanged, this, &MainWindow::metaDataChanged);
+    connect(simpleMediaController, &SimpleMediaController::stateChanged, this, &MainWindow::on_StateChanged);
+    
+    // NEW: Initialize SystemController for system control refactoring
+    systemController = new SystemController(configuration_, systemPaths_, systemExecutor_, this);
+    OPENAUTO_LOG(info) << "[MainWindow] SystemController initialized for refactoring";
+    
+    // LEGACY: Keep old playlist for UI integration (will be removed in next phase)
+    playlist = new QMediaPlaylist(this);
 
     ui_->pushButtonList->hide();
     ui_->pushButtonBackToPlayer->hide();
@@ -551,7 +558,8 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     simpleMediaController->scanFiles();
     
     // Keep existing playlist integration for now (will be refactored later)
-    simpleMediaController->setPlaylist(this->playlist);
+    // Use SimpleMediaController's internal playlist instead of creating a separate one
+    playlist = simpleMediaController->getPlaylist();
     ui_->mp3List->setCurrentRow(configuration->getMp3Track());
     this->currentPlaylistIndex = configuration->getMp3Track();
 
@@ -1349,8 +1357,8 @@ void f1x::openauto::autoapp::ui::MainWindow::on_positionChanged(qint64 position)
 
     int total_seconds, total_minutes;
 
-    total_seconds = (player->duration()/1000) % 60;
-    total_minutes = (player->duration()/1000) / 60;
+    total_seconds = (simpleMediaController->getDuration()/1000) % 60;
+    total_minutes = (simpleMediaController->getDuration()/1000) / 60;
 
     if(total_minutes >= 60){
         int total_hours = (total_minutes/60);
@@ -1391,16 +1399,16 @@ void f1x::openauto::autoapp::ui::MainWindow::on_mp3List_itemClicked(QListWidgetI
 
 void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
 {
-    QString fullpathplaying = player->currentMedia().request().url().toString();
+    QString fullpathplaying = simpleMediaController->getCurrentMedia().toString();
     QString filename = QFileInfo(fullpathplaying).fileName();
 
-    QImage img = player->metaData(QMediaMetaData::CoverArtImage).value<QImage>();
+    QImage img = simpleMediaController->getMetaData("CoverArtImage").value<QImage>();
     QImage imgscaled = img.scaled(270,270,Qt::IgnoreAspectRatio);
     if (!imgscaled.isNull()) {
         ui_->pushButtonBack->setIcon(QPixmap::fromImage(imgscaled));
     } else {
-        if (playlist->currentIndex() != -1 && fullpathplaying != "") {
-            QString filename = ui_->mp3List->item(playlist->currentIndex())->text();
+        if (simpleMediaController->currentIndex() != -1 && fullpathplaying != "") {
+            QString filename = ui_->mp3List->item(simpleMediaController->currentIndex())->text();
             QString currentMusicFolder = getMusicFolder();
             QString currentAlbumFolder = getAlbumFolder();
             QString cover = currentMusicFolder + "/" + currentAlbumFolder + "/" + filename + ".png";
@@ -1448,9 +1456,9 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
         // Fall back to player metadata
     }
     
-    // Fallback: use metadata from player
-    QString AlbumInterpret = player->metaData(QMediaMetaData::AlbumArtist).toString();
-    QString Title = player->metaData(QMediaMetaData::Title).toString();
+    // Fallback: use metadata from SimpleMediaController
+    QString AlbumInterpret = simpleMediaController->getMetaData("AlbumArtist").toString();
+    QString Title = simpleMediaController->getMetaData("Title").toString();
 
     if (AlbumInterpret == "" && ui_->comboBoxAlbum->currentText() != ".") {
         AlbumInterpret = ui_->comboBoxAlbum->currentText();
@@ -1507,7 +1515,7 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerPlayList_clicked()
 {
-    simpleMediaController->setPlaylist(this->playlist);
+    // SimpleMediaController uses its own internal playlist
     simpleMediaController->setCurrentIndex(this->currentPlaylistIndex);
     simpleMediaController->play();
     ui_->pushButtonBack->setIcon(QPixmap("://coverlogo.png"));

@@ -68,6 +68,7 @@ namespace system { class SafeSystemExecutor; }
 namespace ui
 {
 class SimpleMediaController;
+class SystemController;
 
 class MainWindow : public QMainWindow
 {
@@ -78,7 +79,6 @@ public:
                        system::SafeSystemExecutor::Pointer systemExecutor,
                        QWidget *parent = nullptr);
     ~MainWindow() override;
-    QMediaPlayer* player;
     QFileSystemWatcher* watcher;
     QFileSystemWatcher* watcher_tmp; 
     
@@ -86,6 +86,11 @@ public:
     // This controller handles media playback and playlist management
     // Goal: Replace all media-related code in MainWindow with controller methods
     SimpleMediaController* simpleMediaController;
+    
+    // REFACTORING: System controller for hardware and UI state management  
+    // This controller handles brightness, volume, and day/night mode
+    // Goal: Extract system control functionality from MainWindow
+    SystemController* systemController;
 
 signals:
     void exit();

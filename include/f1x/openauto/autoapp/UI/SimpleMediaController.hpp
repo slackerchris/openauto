@@ -21,6 +21,7 @@
 #include <QObject>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
+#include <QMediaMetaData>
 #include <f1x/openauto/autoapp/Configuration/IConfiguration.hpp>
 
 namespace f1x
@@ -67,6 +68,9 @@ public:
     int currentIndex() const;
     void setVolume(int volume);
     int getVolume() const;
+    qint64 getDuration() const;
+    QUrl getCurrentMedia() const;
+    QVariant getMetaData(const QString& key) const;
     
     // Getters
     QMediaPlayer* getPlayer() const { return player_; }
