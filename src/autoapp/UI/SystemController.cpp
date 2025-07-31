@@ -96,6 +96,44 @@ int SystemController::getBrightness() const
     return currentBrightness_;
 }
 
+int SystemController::readCurrentBrightness()
+{
+    if (!isBrightnessControlAvailable()) {
+        OPENAUTO_LOG(warning) << "[SystemController] Brightness control not available";
+        return currentBrightness_;
+    }
+    
+    QFile* activeFile = brightnessFile_ && brightnessFile_->isOpen() ? brightnessFile_ : brightnessFileAlt_;
+    if (!activeFile) {
+        OPENAUTO_LOG(warning) << "[SystemController] No brightness file available for reading";
+        return currentBrightness_;
+    }
+    
+    // Temporarily close for reading, then reopen for writing
+    activeFile->close();
+    if (activeFile->open(QIODevice::ReadOnly)) {
+        QByteArray data = activeFile->readAll();
+        activeFile->close();
+        
+        // Reopen for writing
+        activeFile->open(QIODevice::WriteOnly | QIODevice::Text);
+        
+        bool ok;
+        int brightness = data.toInt(&ok);
+        if (ok) {
+            currentBrightness_ = qBound(0, brightness, 100);
+            OPENAUTO_LOG(debug) << "[SystemController] Read brightness from system: " << currentBrightness_;
+            return currentBrightness_;
+        }
+    } else {
+        // Try to reopen for writing
+        activeFile->open(QIODevice::WriteOnly | QIODevice::Text);
+    }
+    
+    OPENAUTO_LOG(warning) << "[SystemController] Failed to read brightness from system";
+    return currentBrightness_;
+}
+
 bool SystemController::isBrightnessControlAvailable() const
 {
     return customBrightnessControl_ && (brightnessFile_ || brightnessFileAlt_);
@@ -105,13 +143,14 @@ void SystemController::setVolume(int value)
 {
     currentVolume_ = qBound(0, value, 100);
     
-    // Execute system volume command
-    QString volumeCommand = QString("amixer -D pulse sset Master %1%").arg(currentVolume_);
-    if (executeSystemCommand(volumeCommand)) {
+    // Use the same helper command as the original MainWindow implementation
+    if (systemExecutor_) {
+        // Use SafeSystemExecutor's helper command interface
+        systemExecutor_->executeHelperCommand("setvolume " + QString::number(currentVolume_));
         OPENAUTO_LOG(debug) << "[SystemController] Volume set to: " << currentVolume_;
         emit volumeChanged(currentVolume_);
     } else {
-        OPENAUTO_LOG(warning) << "[SystemController] Failed to set volume";
+        OPENAUTO_LOG(warning) << "[SystemController] SystemExecutor not available for volume control";
     }
 }
 
@@ -254,6 +293,30 @@ bool SystemController::executeSystemCommand(const QString& command) const
         OPENAUTO_LOG(error) << "[SystemController] Exception executing command: " << command.toStdString();
         return false;
     }
+}
+
+void SystemController::showBrightnessControls()
+{
+    // Read current brightness value and emit signal
+    int currentBrightness = readCurrentBrightness();
+    emit showBrightnessSlider();
+    emit brightnessChanged(currentBrightness);
+}
+
+void SystemController::showVolumeControls()
+{
+    emit showVolumeSlider();
+    emit volumeChanged(currentVolume_);
+}
+
+void SystemController::hideBrightnessControls()
+{
+    emit hideBrightnessSlider();
+}
+
+void SystemController::hideVolumeControls()
+{
+    emit hideVolumeSlider();
 }
 
 }

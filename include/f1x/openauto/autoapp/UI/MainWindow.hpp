@@ -193,11 +193,11 @@ private:
     configuration::SystemPaths::Pointer systemPaths_;
     system::SafeSystemExecutor::Pointer systemExecutor_;
 
-    // Replaced hardcoded paths with SystemPaths configuration
-    QFile *brightnessFile;
-    QFile *brightnessFileAlt;
-    char brightness_str[6];
-    char volume_str[6];
+    // CLEANUP: Removed brightness/volume control members - now handled by SystemController
+    // QFile *brightnessFile;           // → SystemController
+    // QFile *brightnessFileAlt;        // → SystemController  
+    // char brightness_str[6];          // → SystemController
+    // char volume_str[6];              // → SystemController
     int alpha_current_str;
     QString bversion;
     QString bdate;
@@ -234,10 +234,12 @@ private:
 
     bool wifiButtonForce = false;
     bool cameraButtonForce = false;
-    bool brightnessButtonForce = false;
+    // CLEANUP: Removed brightness control flag - now handled by SystemController
+    // bool brightnessButtonForce = false;  // → SystemController
 
-    bool nightModeEnabled = false;
-    bool DayNightModeState = false;
+    // CLEANUP: Removed theme state variables - now handled by SystemController
+    // bool nightModeEnabled = false;       // → SystemController
+    // bool DayNightModeState = false;      // → SystemController
 
     bool devModeEnabled = false;
 
@@ -257,7 +259,8 @@ private:
 
     bool bluetoothEnabled = false;
 
-    bool toggleMute = false;
+    // CLEANUP: Removed mute state - now handled by SystemController
+    // bool toggleMute = false;             // → SystemController
     bool oldGUIStyle = false;
     bool UseBigClock = false;
     bool NoClock = false;
@@ -297,19 +300,21 @@ protected:
     void keyPressEvent(QKeyEvent *event);
 
 private:
+private:
     // Thread-safe accessors for critical shared state
-    bool isNightModeEnabled() const;
-    void setNightModeEnabled(bool enabled);
-    bool isDayNightModeState() const;
-    void setDayNightModeState(bool state);
+    // CLEANUP: Removed system control accessors - now handled by SystemController
+    // bool isNightModeEnabled() const;      // → SystemController
+    // void setNightModeEnabled(bool enabled); // → SystemController
+    // bool isDayNightModeState() const;     // → SystemController
+    // void setDayNightModeState(bool state); // → SystemController
+    // bool isToggleMute() const;            // → SystemController
+    // void setToggleMute(bool mute);        // → SystemController
     bool isExitMenuVisible() const;
     void setExitMenuVisible(bool visible);
     bool isRearCamVisible() const;
     void setRearCamVisible(bool visible);
     bool isDashCamRecording() const;
     void setDashCamRecording(bool recording);
-    bool isToggleMute() const;
-    void setToggleMute(bool mute);
     bool isMediaContentChanged() const;
     void setMediaContentChanged(bool changed);
     

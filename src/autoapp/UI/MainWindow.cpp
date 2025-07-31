@@ -72,11 +72,13 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     this->configuration_ = configuration;
 
     // trigger files - using new SystemPaths approach
-    this->nightModeEnabled = checkFileExists("night_mode");
+    // CLEANUP: Night mode state now handled by SystemController
+    // this->nightModeEnabled = checkFileExists("night_mode");    // → SystemController
     this->devModeEnabled = checkFileExists("dev_mode");
     this->wifiButtonForce = checkFileExists("wifi_button");
     this->cameraButtonForce = checkFileExists("camera_button");
-    this->brightnessButtonForce = checkFileExists("brightness_button");
+    // CLEANUP: Brightness button state now handled by SystemController  
+    // this->brightnessButtonForce = checkFileExists("brightness_button"); // → SystemController
     this->systemDebugmode = checkFileExists("debug_mode");
     this->lightsensor = checkFileExists("light_sensor");
     this->c1ButtonForce = checkFileExists("custom_button_1");
@@ -228,10 +230,8 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
         }
     }
 
-    // hide brightness slider of control file is not existing
-    QString brightnessPath = getSystemPath("brightness_control");
-    QFileInfo brightnessFile(brightnessPath);
-    if (!brightnessFile.exists() && !this->brightnessButtonForce) {
+    // hide brightness slider of control file is not existing - now handled by SystemController
+    if (!systemController->isBrightnessControlAvailable()) {
         ui_->pushButtonBrightness->hide();
         ui_->pushButtonBrightness2->hide();
     }
@@ -444,7 +444,7 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
 
     // set bg's on startup
     MainWindow::updateBG();
-    if (!isNightModeEnabled()) {
+    if (!systemController->isNightMode()) {
         ui_->pushButtonDay->hide();
         ui_->pushButtonDay2->hide();
         ui_->pushButtonNight->show();
@@ -532,6 +532,57 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     systemController = new SystemController(configuration_, systemPaths_, systemExecutor_, this);
     OPENAUTO_LOG(info) << "[MainWindow] SystemController initialized for refactoring";
     
+    // Connect SystemController signals to MainWindow UI updates
+    connect(systemController, &SystemController::brightnessChanged, this, [this](int value) {
+        ui_->horizontalSliderBrightness->setValue(value);
+        ui_->brightnessValueLabel->setText(QString::number(value));
+    });
+    
+    connect(systemController, &SystemController::volumeChanged, this, [this](int value) {
+        ui_->horizontalSliderVolume->setValue(value);
+        ui_->volumeValueLabel->setText(QString::number(value) + "%");
+    });
+    
+    connect(systemController, &SystemController::themeChanged, this, [this](bool isNightMode) {
+        if (isNightMode) {
+            ui_->pushButtonDay->show();
+            ui_->pushButtonDay2->show();
+            ui_->pushButtonNight->hide();
+            ui_->pushButtonNight2->hide();
+        } else {
+            ui_->pushButtonNight->show();
+            ui_->pushButtonNight2->show();
+            ui_->pushButtonDay->hide();
+            ui_->pushButtonDay2->hide();
+        }
+        updateBG(); // Update background for theme change
+    });
+    
+    connect(systemController, &SystemController::showBrightnessSlider, this, [this]() {
+        ui_->BrightnessSliderControl->show();
+        ui_->VolumeSliderControl->hide();
+    });
+    
+    connect(systemController, &SystemController::showVolumeSlider, this, [this]() {
+        ui_->VolumeSliderControl->show();
+        ui_->BrightnessSliderControl->hide();
+        ui_->horizontalSliderVolume->show();
+        ui_->volumeValueLabel->show();
+        if (systemController->isMuted()) {
+            ui_->pushButtonUnMute->show();
+        } else {
+            ui_->pushButtonMute->show();
+        }
+    });
+    
+    connect(systemController, &SystemController::hideBrightnessSlider, this, [this]() {
+        ui_->BrightnessSliderControl->hide();
+    });
+    
+    connect(systemController, &SystemController::hideVolumeSlider, this, [this]() {
+        ui_->VolumeSliderControl->hide();
+    });
+    
     // LEGACY: Keep old playlist for UI integration (will be removed in next phase)
     playlist = new QMediaPlaylist(this);
 
@@ -596,28 +647,13 @@ MainWindow::~MainWindow()
 }
 
 // Thread-safe accessors for critical shared state
-bool MainWindow::isNightModeEnabled() const {
-    QReadLocker locker(&stateLock_);
-    return nightModeEnabled;
-}
-
-void MainWindow::setNightModeEnabled(bool enabled) {
-    QWriteLocker locker(&stateLock_);
-    if (nightModeEnabled != enabled) {
-        nightModeEnabled = enabled;
-        // Note: UI updates should be queued to main thread if called from other threads
-    }
-}
-
-bool MainWindow::isDayNightModeState() const {
-    QReadLocker locker(&stateLock_);
-    return DayNightModeState;
-}
-
-void MainWindow::setDayNightModeState(bool state) {
-    QWriteLocker locker(&stateLock_);
-    DayNightModeState = state;
-}
+// CLEANUP: Removed system control accessors - now handled by SystemController
+// bool MainWindow::isNightModeEnabled() const       // → SystemController
+// void MainWindow::setNightModeEnabled(bool enabled) // → SystemController  
+// bool MainWindow::isDayNightModeState() const      // → SystemController
+// void MainWindow::setDayNightModeState(bool state) // → SystemController
+// bool MainWindow::isToggleMute() const             // → SystemController
+// void MainWindow::setToggleMute(bool mute)         // → SystemController
 
 bool MainWindow::isExitMenuVisible() const {
     QReadLocker locker(&stateLock_);
@@ -647,16 +683,6 @@ bool MainWindow::isDashCamRecording() const {
 void MainWindow::setDashCamRecording(bool recording) {
     QWriteLocker locker(&stateLock_);
     dashCamRecording = recording;
-}
-
-bool MainWindow::isToggleMute() const {
-    QReadLocker locker(&stateLock_);
-    return toggleMute;
-}
-
-void MainWindow::setToggleMute(bool mute) {
-    QWriteLocker locker(&stateLock_);
-    toggleMute = mute;
 }
 
 bool MainWindow::isMediaContentChanged() const {
@@ -792,122 +818,38 @@ void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed6()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness_clicked()
 {
-    this->brightnessFile = new QFile(getSystemPath("brightness"));
-    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
-
-    // Get the current brightness value
-    if (!this->customBrightnessControl) {
-        if (this->brightnessFile->open(QIODevice::ReadOnly)) {
-            QByteArray data = this->brightnessFile->readAll();
-            std::string::size_type sz;
-            int brightness_val = std::stoi(data.toStdString(), &sz);
-            ui_->horizontalSliderBrightness->setValue(brightness_val);
-            QString bri=QString::number(brightness_val);
-            ui_->brightnessValueLabel->setText(bri);
-            this->brightnessFile->close();
-        }
-    } else {
-        if (this->brightnessFileAlt->open(QIODevice::ReadOnly)) {
-            QByteArray data = this->brightnessFileAlt->readAll();
-            std::string::size_type sz;
-            int brightness_val = std::stoi(data.toStdString(), &sz);
-            ui_->horizontalSliderBrightness->setValue(brightness_val);
-            QString bri=QString::number(brightness_val);
-            ui_->brightnessValueLabel->setText(bri);
-            this->brightnessFileAlt->close();
-        }
-    }
-    ui_->BrightnessSliderControl->show();
-    ui_->VolumeSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->showBrightnessControls();
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness2_clicked()
 {
-    this->brightnessFile = new QFile(getSystemPath("brightness"));
-    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
-
-    // Get the current brightness value
-    if (!this->customBrightnessControl) {
-        if (this->brightnessFile->open(QIODevice::ReadOnly)) {
-            QByteArray data = this->brightnessFile->readAll();
-            std::string::size_type sz;
-            int brightness_val = std::stoi(data.toStdString(), &sz);
-            ui_->horizontalSliderBrightness->setValue(brightness_val);
-            QString bri=QString::number(brightness_val);
-            ui_->brightnessValueLabel->setText(bri);
-            this->brightnessFile->close();
-        }
-    } else {
-        if (this->brightnessFileAlt->open(QIODevice::ReadOnly)) {
-            QByteArray data = this->brightnessFileAlt->readAll();
-            std::string::size_type sz;
-            int brightness_val = std::stoi(data.toStdString(), &sz);
-            ui_->horizontalSliderBrightness->setValue(brightness_val);
-            QString bri=QString::number(brightness_val);
-            ui_->brightnessValueLabel->setText(bri);
-            this->brightnessFileAlt->close();
-        }
-    }
-    ui_->BrightnessSliderControl->show();
-    ui_->VolumeSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->showBrightnessControls();
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonVolume_clicked()
 {
-    ui_->horizontalSliderVolume->show();
-    ui_->volumeValueLabel->show();
-    if (this->toggleMute) {
-        ui_->pushButtonUnMute->show();
-    } else {
-        ui_->pushButtonMute->show();
-    }
-    ui_->VolumeSliderControl->show();
-    ui_->BrightnessSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->showVolumeControls();
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonVolume2_clicked()
 {
-    ui_->horizontalSliderVolume->show();
-    ui_->volumeValueLabel->show();
-    if (this->toggleMute) {
-        ui_->pushButtonUnMute->show();
-    } else {
-        ui_->pushButtonMute->show();
-    }
-    ui_->VolumeSliderControl->show();
-    ui_->BrightnessSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->showVolumeControls();
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderBrightness_valueChanged(int value)
 {
-    int n = snprintf(this->brightness_str, 5, "%d", value);
-    this->brightnessFile = new QFile(getSystemPath("brightness"));
-    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
-
-    if (!this->customBrightnessControl) {
-        if (this->brightnessFile->open(QIODevice::WriteOnly)) {
-            this->brightness_str[n] = '\n';
-            this->brightness_str[n+1] = '\0';
-            this->brightnessFile->write(this->brightness_str);
-            this->brightnessFile->close();
-        }
-    } else {
-        if (this->brightnessFileAlt->open(QIODevice::WriteOnly)) {
-            this->brightness_str[n] = '\n';
-            this->brightness_str[n+1] = '\0';
-            this->brightnessFileAlt->write(this->brightness_str);
-            this->brightnessFileAlt->close();
-        }
-    }
-    QString bri=QString::number(value);
-    ui_->brightnessValueLabel->setText(bri);
+    // REFACTORING: Delegate to SystemController
+    systemController->setBrightness(value);
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderVolume_valueChanged(int value)
 {
-    QString vol=QString::number(value);
-    ui_->volumeValueLabel->setText(vol+"%");
-    systemExecutor_->executeHelperCommand("setvolume " + QString::number(value));
+    // REFACTORING: Delegate to SystemController
+    systemController->setVolume(value);
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::updateAlpha()
@@ -972,29 +914,25 @@ void f1x::openauto::autoapp::ui::MainWindow::updateAlpha()
 
 void f1x::openauto::autoapp::ui::MainWindow::switchGuiToNight()
 {
-    //MainWindow::on_pushButtonVolume_clicked();
-    f1x::openauto::autoapp::ui::MainWindow::updateBG();
-    ui_->pushButtonDay->show();
-    ui_->pushButtonDay2->show();
-    ui_->pushButtonNight->hide();
-    ui_->pushButtonNight2->hide();
-    ui_->BrightnessSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->switchToNightMode();
+    
+    // Hide controls when switching themes
+    systemController->hideBrightnessControls();
     if (ui_->mediaWidget->isVisible() == true) {
-        ui_->VolumeSliderControl->hide();
+        systemController->hideVolumeControls();
     }
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::switchGuiToDay()
 {
-    //MainWindow::on_pushButtonVolume_clicked();
-    f1x::openauto::autoapp::ui::MainWindow::updateBG();
-    ui_->pushButtonNight->show();
-    ui_->pushButtonNight2->show();
-    ui_->pushButtonDay->hide();
-    ui_->pushButtonDay2->hide();
-    ui_->BrightnessSliderControl->hide();
+    // REFACTORING: Delegate to SystemController
+    systemController->switchToDayMode();
+    
+    // Hide controls when switching themes
+    systemController->hideBrightnessControls();
     if (ui_->mediaWidget->isVisible() == true) {
-        ui_->VolumeSliderControl->hide();
+        systemController->hideVolumeControls();
     }
 }
 
@@ -1107,14 +1045,14 @@ void f1x::openauto::autoapp::ui::MainWindow::toggleExit()
 
 void f1x::openauto::autoapp::ui::MainWindow::toggleMuteButton()
 {
-    if (!isToggleMute()) {
+    if (!systemController->isMuted()) {
         ui_->pushButtonMute->hide();
         ui_->pushButtonUnMute->show();
-        setToggleMute(true);
+        systemController->setMute(true);
     } else {
         ui_->pushButtonUnMute->hide();
         ui_->pushButtonMute->show();
-        setToggleMute(false);
+        systemController->setMute(false);
     }
 }
 
@@ -1156,7 +1094,7 @@ void f1x::openauto::autoapp::ui::MainWindow::updateBG()
         this->setStyleSheet("QMainWindow { background: url(:/wallpaper-firework.png); background-repeat: no-repeat; background-position: center; }");
         this->holidaybg = true;
     }
-    if (!isNightModeEnabled()) {
+    if (!systemController->isNightMode()) {
         if (ui_->mediaWidget->isVisible() == true) {
             if (this->wallpaperEQFileExists) {
                 this->setStyleSheet("QMainWindow { background: url(wallpaper-eq.png); background-repeat: no-repeat; background-position: center; }");
@@ -2108,20 +2046,14 @@ void f1x::openauto::autoapp::ui::MainWindow::tmpChanged()
         }
     }
 
-    // update day/night state
+    // update day/night state - now handled by SystemController
     bool currentNightMode = check_file_exist("/tmp/night_mode_enabled");
-    setNightModeEnabled(currentNightMode);
-
-    if (isNightModeEnabled()) {
-        if (!isDayNightModeState()) {
-            setDayNightModeState(true);
-            f1x::openauto::autoapp::ui::MainWindow::switchGuiToNight();
-        }
-    } else {
-        if (isDayNightModeState()) {
-            setDayNightModeState(false);
-            f1x::openauto::autoapp::ui::MainWindow::switchGuiToDay();
-        }
+    
+    // Update SystemController state based on file system trigger
+    if (currentNightMode && !systemController->isNightMode()) {
+        f1x::openauto::autoapp::ui::MainWindow::switchGuiToNight();
+    } else if (!currentNightMode && systemController->isNightMode()) {
+        f1x::openauto::autoapp::ui::MainWindow::switchGuiToDay();
     }
 
     // camera stuff

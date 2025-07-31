@@ -53,6 +53,7 @@ public:
     // Brightness control
     void setBrightness(int value);
     int getBrightness() const;
+    int readCurrentBrightness(); // Read actual brightness from system file
     bool isBrightnessControlAvailable() const;
     
     // Volume control
@@ -67,12 +68,24 @@ public:
     // System state
     void setMute(bool muted);
     bool isMuted() const;
+    
+    // UI Control helpers (for gradual migration)
+    void showBrightnessControls();
+    void showVolumeControls();
+    void hideBrightnessControls();
+    void hideVolumeControls();
 
 signals:
     void brightnessChanged(int value);
     void volumeChanged(int value);
     void themeChanged(bool isNightMode);
     void muteStateChanged(bool isMuted);
+    
+    // UI control signals
+    void showBrightnessSlider();
+    void showVolumeSlider();
+    void hideBrightnessSlider();
+    void hideVolumeSlider();
 
 private:
     // Helper methods
