@@ -22,6 +22,8 @@
 #include <QMainWindow>
 #include <QFile>
 #include <f1x/openauto/autoapp/Configuration/IConfiguration.hpp>
+#include <f1x/openauto/autoapp/Configuration/SystemPaths.hpp>
+#include <f1x/openauto/autoapp/System/SafeSystemExecutor.hpp>
 
 #include <QMediaPlayer>
 #include <QListWidgetItem>
@@ -58,6 +60,8 @@ namespace openauto
 {
 namespace autoapp
 {
+namespace configuration { class SystemPaths; }
+namespace system { class SafeSystemExecutor; }
 namespace ui
 {
 
@@ -65,7 +69,10 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit MainWindow(configuration::IConfiguration::Pointer configuration, QWidget *parent = nullptr);
+    explicit MainWindow(configuration::IConfiguration::Pointer configuration, 
+                       configuration::SystemPaths::Pointer systemPaths,
+                       system::SafeSystemExecutor::Pointer systemExecutor,
+                       QWidget *parent = nullptr);
     ~MainWindow() override;
     QMediaPlayer* player;
     QFileSystemWatcher* watcher;
@@ -169,9 +176,10 @@ private slots:
 private:
     Ui::MainWindow* ui_;
     configuration::IConfiguration::Pointer configuration_;
+    configuration::SystemPaths::Pointer systemPaths_;
+    system::SafeSystemExecutor::Pointer systemExecutor_;
 
-    QString brightnessFilename = "/sys/class/backlight/rpi_backlight/brightness";
-    QString brightnessFilenameAlt = "/tmp/custombrightness";
+    // Replaced hardcoded paths with SystemPaths configuration
     QFile *brightnessFile;
     QFile *brightnessFileAlt;
     char brightness_str[6];
@@ -180,27 +188,19 @@ private:
     QString bversion;
     QString bdate;
 
-    char nightModeFile[32] = "/tmp/night_mode_enabled";
-    char devModeFile[32] = "/tmp/dev_mode_enabled";
-    char wifiButtonFile[32] = "/etc/button_wifi_visible";
-    char cameraButtonFile[32] = "/etc/button_camera_visible";
-    char brightnessButtonFile[32] = "/etc/button_brightness_visible";
-    char debugModeFile[32] = "/tmp/usb_debug_mode";
-    char lsFile[32] = "/etc/cs_lightsensor";
-
-    char custom_button_file_c1[26] = "/boot/crankshaft/button_1";
-    char custom_button_file_c2[26] = "/boot/crankshaft/button_2";
-    char custom_button_file_c3[26] = "/boot/crankshaft/button_3";
-    char custom_button_file_c4[26] = "/boot/crankshaft/button_4";
-    char custom_button_file_c5[26] = "/boot/crankshaft/button_5";
-    char custom_button_file_c6[26] = "/boot/crankshaft/button_6";
-
     QString custom_button_command_c1;
     QString custom_button_command_c2;
     QString custom_button_command_c3;
     QString custom_button_command_c4;
     QString custom_button_command_c5;
     QString custom_button_command_c6;
+
+    QString custom_button_file_c1;
+    QString custom_button_file_c2;
+    QString custom_button_file_c3;
+    QString custom_button_file_c4;
+    QString custom_button_file_c5;
+    QString custom_button_file_c6;
 
     QString custom_button_color_c1 = "186,189,192";
     QString custom_button_color_c2 = "186,189,192";
@@ -210,9 +210,9 @@ private:
     QString custom_button_color_c6 = "186,189,192";
 
     QString selectedMp3file;
-    QString musicfolder = "/media/CSSTORAGE/Music";
-    QString albumfolder = "/";
     QString date_text;
+    QString musicfolder;
+    QString albumfolder;
 
     QMediaPlaylist *playlist;
 
@@ -275,6 +275,13 @@ private:
 
 protected:
     void keyPressEvent(QKeyEvent *event);
+
+private:
+    // Helper methods for system paths
+    bool checkFileExists(const QString& pathKey) const;
+    QString getSystemPath(const QString& pathKey) const;
+    bool executeSystemCommand(const QString& command) const;
+    bool executeCrankshaftCommand(const QString& action) const;
 
 };
 

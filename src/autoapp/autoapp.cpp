@@ -33,6 +33,8 @@
 #include <f1x/openauto/autoapp/Service/AndroidAutoEntityFactory.hpp>
 #include <f1x/openauto/autoapp/Service/ServiceFactory.hpp>
 #include <f1x/openauto/autoapp/Configuration/Configuration.hpp>
+#include <f1x/openauto/autoapp/Configuration/SystemPaths.hpp>
+#include <f1x/openauto/autoapp/System/SafeSystemExecutor.hpp>
 #include <f1x/openauto/autoapp/UI/MainWindow.hpp>
 #include <f1x/openauto/autoapp/UI/SettingsWindow.hpp>
 #include <f1x/openauto/autoapp/UI/ConnectDialog.hpp>
@@ -131,8 +133,10 @@ int main(int argc, char* argv[])
     OPENAUTO_LOG(info) << "[AutoApp] Display height: " << height;
 
     auto configuration = std::make_shared<autoapp::configuration::Configuration>();
+    auto systemPaths = std::make_shared<autoapp::configuration::SystemPaths>();
+    auto systemExecutor = std::make_shared<autoapp::system::SafeSystemExecutor>(systemPaths);
 
-    autoapp::ui::MainWindow mainWindow(configuration);
+    autoapp::ui::MainWindow mainWindow(configuration, systemPaths, systemExecutor);
     //mainWindow.setWindowFlags(Qt::WindowStaysOnTopHint);
 
     autoapp::ui::SettingsWindow settingsWindow(configuration);

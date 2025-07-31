@@ -354,19 +354,44 @@ auto resourceGuard = common::ErrorHandler::makeResourceGuard(resource, [](auto& 
 
 **Recommendation**: Create tickets to systematically address remaining 8-9 items using established ErrorHandler patterns.
 
-#### 6. Hardcoded System Dependencies - **READY FOR IMPROVEMENT**
-**Severity**: Medium  
-**Status**: 🔲 **READY** - Error handling infrastructure supports safe system call improvements
+#### 6. ✅ **Hardcoded System Dependencies - RESOLVED**
+**Previous Severity**: Medium  
+**Status**: ✅ **COMPLETED** - Comprehensive configuration system implemented
 
-**Problem**: Direct system calls and hardcoded paths reduce portability.
+**Problem SOLVED**: Direct system calls and hardcoded paths have been systematically replaced with a secure, configurable system dependency manager.
 
-**Examples**:
+**Solution Implemented**:
+- ✅ **SystemPaths configuration class** - Centralized path management with environment variable overrides
+- ✅ **SafeSystemExecutor utility** - Secure command execution replacing dangerous `system()` calls
+- ✅ **Path validation and security** - Prevents command injection and directory traversal attacks
+- ✅ **Integration with ErrorHandler** - Comprehensive error handling and recovery
+
+**Previous Examples (Now Fixed)**:
 ```cpp
+// OLD (Hardcoded and unsafe):
 system("/usr/local/bin/autoapp_helper usbreset");
 QString brightnessFilename = "/sys/class/backlight/rpi_backlight/brightness";
+
+// NEW (Configurable and secure):
+systemExecutor_->executeHelperCommand("usbreset");
+QString brightnessPath = systemPaths_->getBrightnessControlFile();
 ```
 
-**Recommendation**: Use ErrorHandler::safeExecute() patterns to implement configuration system with proper error handling for system operations.
+**Security Improvements**:
+- **Command injection prevention** - Whitelist-based command validation
+- **Path traversal protection** - Comprehensive path validation
+- **Timeout handling** - Prevents hanging system calls
+- **Error visibility** - Detailed logging and recovery strategies
+
+**Configuration Features**:
+- Environment variable overrides (`OPENAUTO_BRIGHTNESS_PATH`, etc.)
+- Runtime path customization for different platforms
+- Automatic fallback mechanisms when paths don't exist
+- Platform-specific configuration support
+
+**Documentation**: See [Hardcoded Dependencies Solution](./HARDCODED_DEPENDENCIES_SOLUTION.md) for complete implementation details.
+
+**Recommendation**: ✅ **COMPLETED** - Ready for deployment and testing across different platforms.
 
 ### 🟢 MINOR ISSUES (Nice to Fix)
 
@@ -675,7 +700,7 @@ if (detectVideoCoreVersion() >= VIDEOCORE_VI) {
 | Category | Count | Status | Progress |
 |----------|-------|---------|-----------|
 | **Critical Issues** | 3 → 1 | 🟡 **Major Progress** | 67% improvement |
-| **Moderate Issues** | 3 → 3 | 🟡 **In Progress** | Foundation established |
+| **Moderate Issues** | 3 → 2 | ✅ **Significant Progress** | 33% improvement |
 | **Minor Issues** | 2 | 🟢 Nice to Fix | Unchanged |
 | **TODO/FIXME Items** | 11 → 8 | 📝 **Reduced** | ~25% improvement |
 | **Generic Exception Handlers** | 20+ → ~15 | 🟡 **~25% REDUCTION** | Substantial progress |
@@ -687,6 +712,8 @@ if (detectVideoCoreVersion() >= VIDEOCORE_VI) {
 - ✅ **Graceful degradation patterns** implemented for media operations
 - ✅ **Compilation validated** - All error handling improvements integrate successfully
 - ✅ **Foundation strengthened** for continued systematic error handling migration
+- ✅ **Hardcoded dependencies resolved** - Comprehensive SystemPaths and SafeSystemExecutor implementation
+- ✅ **Security improvements** - Command injection prevention and path validation implemented
 
 ---
 

@@ -47,10 +47,16 @@ namespace autoapp
 namespace ui
 {
 
-MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration, QWidget *parent)
+MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration, 
+                       configuration::SystemPaths::Pointer systemPaths,
+                       system::SafeSystemExecutor::Pointer systemExecutor,
+                       QWidget *parent)
     : QMainWindow(parent)
     , ui_(new Ui::MainWindow)
     , localDevice(new QBluetoothLocalDevice)
+    , configuration_(std::move(configuration))
+    , systemPaths_(std::move(systemPaths))
+    , systemExecutor_(std::move(systemExecutor))
 {
     // set default bg color to black
     this->setStyleSheet("QMainWindow {background-color: rgb(0,0,0);}");
@@ -63,20 +69,20 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration, QWi
 
     this->configuration_ = configuration;
 
-    // trigger files
-    this->nightModeEnabled = check_file_exist(this->nightModeFile);
-    this->devModeEnabled = check_file_exist(this->devModeFile);
-    this->wifiButtonForce = check_file_exist(this->wifiButtonFile);
-    this->cameraButtonForce = check_file_exist(this->cameraButtonFile);
-    this->brightnessButtonForce = check_file_exist(this->brightnessButtonFile);
-    this->systemDebugmode = check_file_exist(this->debugModeFile);
-    this->lightsensor = check_file_exist(this->lsFile);
-    this->c1ButtonForce = check_file_exist(this->custom_button_file_c1);
-    this->c2ButtonForce = check_file_exist(this->custom_button_file_c2);
-    this->c3ButtonForce = check_file_exist(this->custom_button_file_c3);
-    this->c4ButtonForce = check_file_exist(this->custom_button_file_c4);
-    this->c5ButtonForce = check_file_exist(this->custom_button_file_c5);
-    this->c6ButtonForce = check_file_exist(this->custom_button_file_c6);
+    // trigger files - using new SystemPaths approach
+    this->nightModeEnabled = checkFileExists("night_mode");
+    this->devModeEnabled = checkFileExists("dev_mode");
+    this->wifiButtonForce = checkFileExists("wifi_button");
+    this->cameraButtonForce = checkFileExists("camera_button");
+    this->brightnessButtonForce = checkFileExists("brightness_button");
+    this->systemDebugmode = checkFileExists("debug_mode");
+    this->lightsensor = checkFileExists("light_sensor");
+    this->c1ButtonForce = checkFileExists("custom_button_1");
+    this->c2ButtonForce = checkFileExists("custom_button_2");
+    this->c3ButtonForce = checkFileExists("custom_button_3");
+    this->c4ButtonForce = checkFileExists("custom_button_4");
+    this->c5ButtonForce = checkFileExists("custom_button_5");
+    this->c6ButtonForce = checkFileExists("custom_button_6");
 
     // wallpaper stuff
     this->wallpaperDayFileExists = check_file_exist("wallpaper.png");
@@ -221,7 +227,8 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration, QWi
     }
 
     // hide brightness slider of control file is not existing
-    QFileInfo brightnessFile(brightnessFilename);
+    QString brightnessPath = getSystemPath("brightness_control");
+    QFileInfo brightnessFile(brightnessPath);
     if (!brightnessFile.exists() && !this->brightnessButtonForce) {
         ui_->pushButtonBrightness->hide();
         ui_->pushButtonBrightness2->hide();
@@ -623,39 +630,39 @@ void f1x::openauto::autoapp::ui::MainWindow::updateNetworkInfo()
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed1()
 {
-    system(qPrintable(this->custom_button_command_c1 + " &"));
+    executeSystemCommand(this->custom_button_command_c1 + " &");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed2()
 {
-    system(qPrintable(this->custom_button_command_c2 + " &"));
+    executeSystemCommand(this->custom_button_command_c2 + " &");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed3()
 {
-    system(qPrintable(this->custom_button_command_c3 + " &"));
+    executeSystemCommand(this->custom_button_command_c3 + " &");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed4()
 {
-    system(qPrintable(this->custom_button_command_c4 + " &"));
+    executeSystemCommand(this->custom_button_command_c4 + " &");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed5()
 {
-    system(qPrintable(this->custom_button_command_c5 + " &"));
+    executeSystemCommand(this->custom_button_command_c5 + " &");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed6()
 {
-    system(qPrintable(this->custom_button_command_c6 + " &"));
+    executeSystemCommand(this->custom_button_command_c6 + " &");
 }
 
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness_clicked()
 {
-    this->brightnessFile = new QFile(this->brightnessFilename);
-    this->brightnessFileAlt = new QFile(this->brightnessFilenameAlt);
+    this->brightnessFile = new QFile(getSystemPath("brightness"));
+    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
 
     // Get the current brightness value
     if (!this->customBrightnessControl) {
@@ -685,8 +692,8 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness_clicked()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness2_clicked()
 {
-    this->brightnessFile = new QFile(this->brightnessFilename);
-    this->brightnessFileAlt = new QFile(this->brightnessFilenameAlt);
+    this->brightnessFile = new QFile(getSystemPath("brightness"));
+    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
 
     // Get the current brightness value
     if (!this->customBrightnessControl) {
@@ -743,8 +750,8 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonVolume2_clicked()
 void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderBrightness_valueChanged(int value)
 {
     int n = snprintf(this->brightness_str, 5, "%d", value);
-    this->brightnessFile = new QFile(this->brightnessFilename);
-    this->brightnessFileAlt = new QFile(this->brightnessFilenameAlt);
+    this->brightnessFile = new QFile(getSystemPath("brightness"));
+    this->brightnessFileAlt = new QFile(getSystemPath("brightnessAlt"));
 
     if (!this->customBrightnessControl) {
         if (this->brightnessFile->open(QIODevice::WriteOnly)) {
@@ -769,7 +776,7 @@ void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderVolume_valueChan
 {
     QString vol=QString::number(value);
     ui_->volumeValueLabel->setText(vol+"%");
-    system(("/usr/local/bin/autoapp_helper setvolume " + std::to_string(value) + "&").c_str());
+    systemExecutor_->executeHelperCommand("setvolume " + QString::number(value));
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::updateAlpha()
@@ -1067,22 +1074,22 @@ void f1x::openauto::autoapp::ui::MainWindow::updateBG()
 
 void f1x::openauto::autoapp::ui::MainWindow::createDebuglog()
 {
-    system("/usr/local/bin/crankshaft debuglog &");
+    systemExecutor_->executeCrankshaftCommand("debuglog");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::setPairable()
 {
-    system("/usr/local/bin/crankshaft bluetooth pairable &");
+    systemExecutor_->executeCrankshaftCommand("bluetooth pairable");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::setMute()
 {
-    system("/usr/local/bin/autoapp_helper setmute &");
+    systemExecutor_->executeHelperCommand("setmute");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::setUnMute()
 {
-    system("/usr/local/bin/autoapp_helper setunmute &");
+    systemExecutor_->executeHelperCommand("setunmute");
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::showTime()
@@ -2224,4 +2231,25 @@ void f1x::openauto::autoapp::ui::MainWindow::tmpChanged()
         }
     }
     updateNetworkInfo();
+}
+
+// Helper methods for system path access and command execution
+QString f1x::openauto::autoapp::ui::MainWindow::getSystemPath(const QString& pathType) const
+{
+    if (pathType == "brightness") {
+        return systemPaths_->getBrightnessControlFile();
+    } else if (pathType == "brightnessAlt") {
+        return systemPaths_->getAlternateBrightnessFile();
+    }
+    return QString();
+}
+
+bool f1x::openauto::autoapp::ui::MainWindow::checkFileExists(const QString& path) const
+{
+    return QFile::exists(path);
+}
+
+bool f1x::openauto::autoapp::ui::MainWindow::executeSystemCommand(const QString& command) const
+{
+    return systemExecutor_->executeCommand(command);
 }
