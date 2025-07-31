@@ -14,9 +14,6 @@
 *
 *  You should have received a copy of the GNU General Public License
 *  along with openauto. If not, see <http://www.gnu.org/licenses/>.
-*/
-
-/*
  * MODERNIZATION NOTE:
  * Created: August 1, 2025
  * Author: GitHub Copilot
