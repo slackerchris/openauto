@@ -40,8 +40,8 @@ void ErrorHandler::logAasdkError(const aasdk::error::Error& error, const std::st
         case aasdk::error::ErrorCode::USB_CLAIM_INTERFACE:
             OPENAUTO_LOG(error) << "  USB interface claim failed - device may be in use";
             break;
-        case aasdk::error::ErrorCode::USB_INVALID_DEVICE_HANDLE:
-            OPENAUTO_LOG(error) << "  Invalid USB device handle - device may have been disconnected";
+        case aasdk::error::ErrorCode::USB_INVALID_DEVICE_ENDPOINTS:
+            OPENAUTO_LOG(error) << "  Invalid USB device endpoints - device may have been disconnected";
             break;
         default:
             OPENAUTO_LOG(error) << "  Unknown AASDK error code";
@@ -57,7 +57,7 @@ bool ErrorHandler::isRecoverableError(const aasdk::error::Error& error) {
             return true;
         case aasdk::error::ErrorCode::USB_TRANSFER:
         case aasdk::error::ErrorCode::USB_CLAIM_INTERFACE:
-        case aasdk::error::ErrorCode::USB_INVALID_DEVICE_HANDLE:
+        case aasdk::error::ErrorCode::USB_INVALID_DEVICE_ENDPOINTS:
             // USB errors might be recoverable by reconnecting
             return true;
         default:
