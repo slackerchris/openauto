@@ -1495,8 +1495,17 @@ void f1x::openauto::autoapp::ui::MainWindow::scanFolders()
             this->currentPlaylistIndex = 0;
             ui_->SysinfoTopLeft->hide();
         }
-    }
-    catch(...) {
+    } catch (const std::bad_alloc& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::scanFolders] Memory allocation failed during album scanning: " << e.what();
+        ui_->SysinfoTopLeft->hide();
+    } catch (const std::runtime_error& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::scanFolders] Runtime error during album scanning: " << e.what();
+        ui_->SysinfoTopLeft->hide();
+    } catch (const std::exception& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::scanFolders] Standard exception during album scanning: " << e.what();
+        ui_->SysinfoTopLeft->hide();
+    } catch (...) {
+        OPENAUTO_LOG(error) << "[MainWindow::scanFolders] Unknown exception during album scanning - hiding system info";
         ui_->SysinfoTopLeft->hide();
     }
     ui_->mp3List->hide();
@@ -1539,8 +1548,17 @@ void f1x::openauto::autoapp::ui::MainWindow::scanFiles()
                     }
                     QString ID3Entry = trackid3 + ": " + artistid3 + " - " + titleid3;
                     ui_->mp3List->addItem(ID3Entry);
+                } catch (const std::bad_alloc& e) {
+                    OPENAUTO_LOG(error) << "[MainWindow::scanFiles] Memory allocation failed reading ID3 tags for " << filename.toStdString() << ": " << e.what();
+                    ui_->mp3List->addItem(filename);
+                } catch (const std::runtime_error& e) {
+                    OPENAUTO_LOG(warning) << "[MainWindow::scanFiles] Runtime error reading ID3 tags for " << filename.toStdString() << ": " << e.what();
+                    ui_->mp3List->addItem(filename);
+                } catch (const std::exception& e) {
+                    OPENAUTO_LOG(warning) << "[MainWindow::scanFiles] Exception reading ID3 tags for " << filename.toStdString() << ": " << e.what();
+                    ui_->mp3List->addItem(filename);
                 } catch (...) {
-                    // old way only adding filename to list
+                    OPENAUTO_LOG(warning) << "[MainWindow::scanFiles] Unknown exception reading ID3 tags for " << filename.toStdString() << " - falling back to filename";
                     ui_->mp3List->addItem(filename);
                 }
             }
@@ -1748,8 +1766,14 @@ void f1x::openauto::autoapp::ui::MainWindow::tmpChanged()
             MainWindow::TriggerAppStop();
             std::remove("/tmp/entityexit");
         }
+    } catch (const std::system_error& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::tmpChanged] System error accessing /tmp/entityexit: " << e.what();
+    } catch (const std::runtime_error& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::tmpChanged] Runtime error in entityexit handling: " << e.what();
+    } catch (const std::exception& e) {
+        OPENAUTO_LOG(error) << "[MainWindow::tmpChanged] Exception in entityexit handling: " << e.what();
     } catch (...) {
-        OPENAUTO_LOG(error) << "[OpenAuto] Error in entityexit";
+        OPENAUTO_LOG(error) << "[MainWindow::tmpChanged] Unknown exception in entityexit handling";
     }
 
     // check if system is in display off mode (tap2wake)
@@ -1848,7 +1872,17 @@ void f1x::openauto::autoapp::ui::MainWindow::tmpChanged()
             }
             deviceData.close();
             ui_->labelAndroidAutoBottom->setText(linedate.simplified().replace("_"," "));
+        } catch (const std::ios_base::failure& e) {
+            OPENAUTO_LOG(warning) << "[MainWindow::tmpChanged] I/O error reading Android device info: " << e.what();
+            ui_->labelAndroidAutoBottom->setText("");
+        } catch (const std::runtime_error& e) {
+            OPENAUTO_LOG(warning) << "[MainWindow::tmpChanged] Runtime error reading Android device info: " << e.what();
+            ui_->labelAndroidAutoBottom->setText("");
+        } catch (const std::exception& e) {
+            OPENAUTO_LOG(warning) << "[MainWindow::tmpChanged] Exception reading Android device info: " << e.what();
+            ui_->labelAndroidAutoBottom->setText("");
         } catch (...) {
+            OPENAUTO_LOG(warning) << "[MainWindow::tmpChanged] Unknown exception reading Android device info - clearing label";
             ui_->labelAndroidAutoBottom->setText("");
         }
     } else {
