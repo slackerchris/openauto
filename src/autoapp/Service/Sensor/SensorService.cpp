@@ -26,8 +26,8 @@
 namespace f1x::openauto::autoapp::service::sensor {
   SensorService::SensorService(boost::asio::io_service &ioService,
                                aasdk::messenger::IMessenger::Pointer messenger)
-      : strand_(ioService),
-        timer_(ioService),
+      : timer_(ioService),
+        strand_(ioService),
         channel_(std::make_shared<aasdk::channel::sensorsource::SensorSourceService>(strand_, std::move(messenger))) {
 
   }

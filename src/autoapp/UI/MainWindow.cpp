@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <f1x/openauto/Common/Log.hpp>
+#include <f1x/openauto/autoapp/UI/SimpleMediaController.hpp>
 
 namespace f1x
 {
@@ -53,8 +54,8 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
                        QWidget *parent)
     : QMainWindow(parent)
     , ui_(new Ui::MainWindow)
-    , localDevice(new QBluetoothLocalDevice)
     , configuration_(std::move(configuration))
+    , localDevice(new QBluetoothLocalDevice)
     , systemPaths_(std::move(systemPaths))
     , systemExecutor_(std::move(systemExecutor))
 {
@@ -523,6 +524,10 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     connect(player, &QMediaPlayer::metaDataAvailableChanged, this, &MainWindow::metaDataChanged);
     connect(player, &QMediaPlayer::stateChanged, this, &MainWindow::on_StateChanged);
 
+    // NEW: Initialize SimpleMediaController for step-by-step refactoring
+    simpleMediaController = new SimpleMediaController(configuration_, this);
+    OPENAUTO_LOG(info) << "[MainWindow] SimpleMediaController initialized for refactoring";
+
     ui_->pushButtonList->hide();
     ui_->pushButtonBackToPlayer->hide();
     ui_->PlayerPlayingWidget->hide();
@@ -540,10 +545,13 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     ui_->comboBoxAlbum->hide();
     ui_->pushButtonAlbum->hide();
 
-    MainWindow::scanFolders();
+    // REFACTORING: Use SimpleMediaController instead of MainWindow methods
+    simpleMediaController->scanFolders();
     ui_->comboBoxAlbum->setCurrentText(QString::fromStdString(configuration->getMp3SubFolder()));
-    MainWindow::scanFiles();
-    player->setPlaylist(this->playlist);
+    simpleMediaController->scanFiles();
+    
+    // Keep existing playlist integration for now (will be refactored later)
+    simpleMediaController->setPlaylist(this->playlist);
     ui_->mp3List->setCurrentRow(configuration->getMp3Track());
     this->currentPlaylistIndex = configuration->getMp3Track();
 
@@ -1040,7 +1048,7 @@ void f1x::openauto::autoapp::ui::MainWindow::playerShow()
     ui_->Info->hide();
     ui_->horizontalSliderProgressPlayer->hide();
     ui_->VolumeSliderControlPlayer->hide();
-    if (player->state() == QMediaPlayer::PlayingState) {
+    if (simpleMediaController->getState() == QMediaPlayer::PlayingState) {
         on_pushButtonBackToPlayer_clicked();
         ui_->Info->show();
         ui_->horizontalSliderProgressPlayer->show();
@@ -1261,12 +1269,12 @@ void f1x::openauto::autoapp::ui::MainWindow::showTime()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderProgressPlayer_sliderMoved(int position)
 {
-    player->setPosition(position);
+    simpleMediaController->setPosition(position);
 }
 
 void f1x::openauto::autoapp::ui::MainWindow::on_horizontalSliderVolumePlayer_sliderMoved(int position)
 {
-    player->setVolume(position);
+    simpleMediaController->setVolume(position);
     ui_->volumeValueLabelPlayer->setText(QString::number(position) + "%");
 }
 
@@ -1282,7 +1290,7 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonList_clicked()
     ui_->mp3List->show();
     ui_->AlbumCoverListView->hide();
 
-    if (playlist->currentIndex() == -1) {
+    if (simpleMediaController->currentIndex() == -1) {
         ui_->pushButtonPlayerStop->hide();
         ui_->pushButtonPlayerPause->hide();
         ui_->pushButtonBackToPlayer->hide();
@@ -1293,8 +1301,9 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonList_clicked()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerStop_clicked()
 {
-    ui_->mp3List->setCurrentRow(playlist->currentIndex());
-    player->stop();
+    ui_->mp3List->setCurrentRow(simpleMediaController->currentIndex());
+    // REFACTORING: Use SimpleMediaController instead of direct player access
+    simpleMediaController->stop();
     ui_->pushButtonBack->setIcon(QPixmap("://coverlogo.png"));
     ui_->pushButtonPlayerPause->setStyleSheet( "background-color: rgb(233, 185, 110); border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(0,0,0);");
     ui_->mp3selectWidget->show();
@@ -1319,13 +1328,13 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerStop_clicked()
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerPause_clicked()
 {
     {
-        if(player->state() == QMediaPlayer::PlayingState){
-            player->pause();
+        if(simpleMediaController->getState() == QMediaPlayer::PlayingState){
+            simpleMediaController->pause();
             ui_->pushButtonPlayerPause->setStyleSheet( "background-color: rgb(218, 143, 143); border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(0,0,0);");
         }else{
             ui_->pushButtonPlayerPause->setStyleSheet( "background-color: rgb(233, 185, 110); border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(0,0,0);");
-            player->play();
-            player->setPosition(player->position());
+            simpleMediaController->play();
+            simpleMediaController->setPosition(simpleMediaController->getPosition());
         }
 
     }
@@ -1498,9 +1507,9 @@ void f1x::openauto::autoapp::ui::MainWindow::metaDataChanged()
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerPlayList_clicked()
 {
-    player->setPlaylist(this->playlist);
-    playlist->setCurrentIndex(this->currentPlaylistIndex);
-    player->play();
+    simpleMediaController->setPlaylist(this->playlist);
+    simpleMediaController->setCurrentIndex(this->currentPlaylistIndex);
+    simpleMediaController->play();
     ui_->pushButtonBack->setIcon(QPixmap("://coverlogo.png"));
     ui_->mp3selectWidget->hide();
     ui_->PlayerPlayingWidget->show();
@@ -1531,7 +1540,8 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonAlbum_clicked()
 void f1x::openauto::autoapp::ui::MainWindow::on_comboBoxAlbum_currentIndexChanged(const QString &arg1)
 {
     this->albumfolder = arg1;
-    MainWindow::scanFiles();
+    // REFACTORING: Use SimpleMediaController instead of MainWindow method
+    simpleMediaController->scanFiles();
     ui_->pushButtonPlayerPause->hide();
     ui_->pushButtonPlayerStop->hide();
     ui_->pushButtonList->hide();
@@ -1705,9 +1715,9 @@ void f1x::openauto::autoapp::ui::MainWindow::on_mp3List_currentRowChanged(int cu
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerNextBig_clicked()
 {
-    playlist->next();
-    if (playlist->currentIndex() != -1) {
-        player->play();
+    simpleMediaController->next();
+    if (simpleMediaController->currentIndex() != -1) {
+        simpleMediaController->play();
         ui_->pushButtonPlayerStop->show();
         ui_->pushButtonPlayerPause->show();
         ui_->pushButtonPlayerPlayList->hide();
@@ -1716,9 +1726,9 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerNextBig_clicked(
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerPrevBig_clicked()
 {
-    playlist->previous();
-    if (playlist->currentIndex() != -1) {
-        player->play();
+    simpleMediaController->previous();
+    if (simpleMediaController->currentIndex() != -1) {
+        simpleMediaController->play();
         ui_->pushButtonPlayerStop->show();
         ui_->pushButtonPlayerPause->show();
         ui_->pushButtonPlayerPlayList->hide();
@@ -1733,12 +1743,12 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerPrevAlbum_clicke
         currentalbum = currentalbum-1;
         ui_->comboBoxAlbum->setCurrentIndex(currentalbum);
         ui_->labelCurrentAlbumIndex->setText(QString::number(currentalbum+1));
-        player->play();
+        simpleMediaController->play();
     } else {
         currentalbum = albumcount-1;
         ui_->comboBoxAlbum->setCurrentIndex(currentalbum);
         ui_->labelCurrentAlbumIndex->setText(QString::number(currentalbum+1));
-        player->play();
+        simpleMediaController->play();
     }
     if (ui_->mp3selectWidget->isVisible() == false) {
         ui_->pushButtonPlayerBack->show();
@@ -1757,12 +1767,12 @@ void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonPlayerNextAlbum_clicke
         currentalbum = currentalbum + 1;
         ui_->comboBoxAlbum->setCurrentIndex(currentalbum);
         ui_->labelCurrentAlbumIndex->setText(QString::number(currentalbum+1));
-        player->play();
+        simpleMediaController->play();
     } else {
         currentalbum = 0;
         ui_->comboBoxAlbum->setCurrentIndex(currentalbum);
         ui_->labelCurrentAlbumIndex->setText(QString::number(currentalbum+1));
-        player->play();
+        simpleMediaController->play();
     }
     if (ui_->mp3selectWidget->isVisible() == false) {
         ui_->pushButtonPlayerBack->show();

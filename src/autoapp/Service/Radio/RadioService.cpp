@@ -25,8 +25,8 @@ namespace f1x::openauto::autoapp::service::radio {
 
   RadioService::RadioService(boost::asio::io_service &ioService,
                              aasdk::messenger::IMessenger::Pointer messenger)
-      : strand_(ioService),
-        timer_(ioService),
+      : timer_(ioService),
+        strand_(ioService),
         channel_(std::make_shared<aasdk::channel::radio::RadioService>(strand_, std::move(messenger))) {
 
   }

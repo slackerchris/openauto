@@ -67,6 +67,7 @@ namespace configuration { class SystemPaths; }
 namespace system { class SafeSystemExecutor; }
 namespace ui
 {
+class SimpleMediaController;
 
 class MainWindow : public QMainWindow
 {
@@ -80,6 +81,11 @@ public:
     QMediaPlayer* player;
     QFileSystemWatcher* watcher;
     QFileSystemWatcher* watcher_tmp; 
+    
+    // REFACTORING: Simple media controller for gradual refactoring
+    // This controller handles media playback and playlist management
+    // Goal: Replace all media-related code in MainWindow with controller methods
+    SimpleMediaController* simpleMediaController;
 
 signals:
     void exit();
