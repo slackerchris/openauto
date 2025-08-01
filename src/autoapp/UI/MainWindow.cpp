@@ -39,6 +39,7 @@
 #include <unistd.h>
 #include <f1x/openauto/Common/Log.hpp>
 #include <f1x/openauto/autoapp/UI/SimpleMediaController.hpp>
+#include <f1x/openauto/autoapp/UI/CustomButtonController.hpp>
 
 namespace f1x
 {
@@ -96,6 +97,9 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
     this->wallpaperEQFileExists = check_file_exist("wallpaper-eq.png");
 
     ui_->setupUi(this);
+
+    // Initialize CustomButtonController
+    customButtonController = new CustomButtonController(this);
 
     connect(ui_->pushButtonSettings, &QPushButton::clicked, this, &MainWindow::openSettings);
     connect(ui_->pushButtonSettings2, &QPushButton::clicked, this, &MainWindow::openSettings);
@@ -272,108 +276,13 @@ MainWindow::MainWindow(configuration::IConfiguration::Pointer configuration,
         ui_->pushButtonNoWiFiDevice2->show();
     }
 
-    // set custom buttons if file enabled by trigger file
-    if (!this->c1ButtonForce) {
-        ui_->pushButton_c1->hide();
-    } else {
-        // read button config 1
-        QFile paramFile(this->custom_button_file_c1);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c1->setText(params[0].simplified());
-        this->custom_button_command_c1 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c1 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c1, &QPushButton::clicked, this, &MainWindow::customButtonPressed1);
-    }
-
-    if (!this->c2ButtonForce) {
-        ui_->pushButton_c2->hide();
-    } else {
-        // read button config 2
-        QFile paramFile(this->custom_button_file_c2);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c2->setText(params[0].simplified());
-        this->custom_button_command_c2 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c2 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c2, &QPushButton::clicked, this, &MainWindow::customButtonPressed2);
-    }
-
-    if (!this->c3ButtonForce) {
-        ui_->pushButton_c3->hide();
-    } else {
-        // read button config 3
-        QFile paramFile(this->custom_button_file_c3);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c3->setText(params[0].simplified());
-        this->custom_button_command_c3 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c3 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c3, &QPushButton::clicked, this, &MainWindow::customButtonPressed3);
-    }
-
-    if (!this->c4ButtonForce) {
-        ui_->pushButton_c4->hide();
-    } else {
-        // read button config 4
-        QFile paramFile(this->custom_button_file_c4);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c4->setText(params[0].simplified());
-        this->custom_button_command_c4 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c4 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c4, &QPushButton::clicked, this, &MainWindow::customButtonPressed4);
-    }
-
-    if (!this->c5ButtonForce) {
-        ui_->pushButton_c5->hide();
-    } else {
-        // read button config 5
-        QFile paramFile(this->custom_button_file_c5);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c5->setText(params[0].simplified());
-        this->custom_button_command_c5 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c5 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c5, &QPushButton::clicked, this, &MainWindow::customButtonPressed5);
-    }
-
-    if (!this->c6ButtonForce) {
-        ui_->pushButton_c6->hide();
-    } else {
-        // read button config 6
-        QFile paramFile(this->custom_button_file_c6);
-        paramFile.open(QIODevice::ReadOnly);
-        QTextStream data(&paramFile);
-        QStringList params = data.readAll().split("#");
-        paramFile.close();
-        ui_->pushButton_c6->setText(params[0].simplified());
-        this->custom_button_command_c6 = params[1].simplified();
-        if (params[2] != "") {
-            this->custom_button_color_c6 = params[2].simplified();
-        }
-        connect(ui_->pushButton_c6, &QPushButton::clicked, this, &MainWindow::customButtonPressed6);
-    }
+    // Use CustomButtonController for all custom button setup
+    customButtonController->setupButton(ui_->pushButton_c1, "/boot/crankshaft/custom_button_1", c1ButtonForce);
+    customButtonController->setupButton(ui_->pushButton_c2, "/boot/crankshaft/custom_button_2", c2ButtonForce);
+    customButtonController->setupButton(ui_->pushButton_c3, "/boot/crankshaft/custom_button_3", c3ButtonForce);
+    customButtonController->setupButton(ui_->pushButton_c4, "/boot/crankshaft/custom_button_4", c4ButtonForce);
+    customButtonController->setupButton(ui_->pushButton_c5, "/boot/crankshaft/custom_button_5", c5ButtonForce);
+    customButtonController->setupButton(ui_->pushButton_c6, "/boot/crankshaft/custom_button_6", c6ButtonForce);
 
     // as default hide camera controls
     ui_->cameraWidget->hide();
@@ -785,35 +694,7 @@ void f1x::openauto::autoapp::ui::MainWindow::updateNetworkInfo()
     }
 }
 
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed1()
-{
-    executeSystemCommand(this->custom_button_command_c1 + " &");
-}
-
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed2()
-{
-    executeSystemCommand(this->custom_button_command_c2 + " &");
-}
-
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed3()
-{
-    executeSystemCommand(this->custom_button_command_c3 + " &");
-}
-
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed4()
-{
-    executeSystemCommand(this->custom_button_command_c4 + " &");
-}
-
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed5()
-{
-    executeSystemCommand(this->custom_button_command_c5 + " &");
-}
-
-void f1x::openauto::autoapp::ui::MainWindow::customButtonPressed6()
-{
-    executeSystemCommand(this->custom_button_command_c6 + " &");
-}
+// Custom button press logic now handled by CustomButtonController
 
 
 void f1x::openauto::autoapp::ui::MainWindow::on_pushButtonBrightness_clicked()
@@ -874,12 +755,8 @@ void f1x::openauto::autoapp::ui::MainWindow::updateAlpha()
         ui_->pushButtonCameraShow->setStyleSheet( "QPushButton{background-color: rgba(100, 62, 4, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
         ui_->pushButtonWifi->setStyleSheet( "QPushButton{background-color: rgba(252, 175, 62, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
         ui_->pushButtonToggleGUI->setStyleSheet( "QPushButton{background-color: rgba(237, 164, 255, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c1->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c1 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c2->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c2 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c3->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c3 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c4->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c4 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c5->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c5 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
-        ui_->pushButton_c6->setStyleSheet( "QPushButton{background-color: rgba(" + this->custom_button_color_c6 + ", " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5); color: rgb(255,255,255);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
+        // Custom button styling now handled by CustomButtonController
+        customButtonController->updateButtonAlpha(alp.toInt());
         ui_->pushButtonDummy1->setStyleSheet( "QPushButton{background-color: rgba(186, 189, 182, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
         ui_->pushButtonDummy2->setStyleSheet( "QPushButton{background-color: rgba(186, 189, 182, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");
         ui_->pushButtonDummy3->setStyleSheet( "QPushButton{background-color: rgba(186, 189, 182, " + alp + " ); outline-style: dotted; outline-color: #92a8d1; border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);} QPushButton:focus {border: 2px solid rgba(125,125,125,0.5);}");

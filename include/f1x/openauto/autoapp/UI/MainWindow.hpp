@@ -50,7 +50,16 @@
 #include <QMutexLocker>
 
 #include <QBluetoothLocalDevice>
-//#include <QtBluetooth>
+
+namespace f1x {
+namespace openauto {
+namespace autoapp {
+namespace ui {
+    class CustomButtonController;
+}
+}
+}
+}
 
 namespace Ui
 {
@@ -144,12 +153,7 @@ private slots:
     void toggleGUI();
     void setMute();
     void setUnMute();
-    void customButtonPressed1();
-    void customButtonPressed2();
-    void customButtonPressed3();
-    void customButtonPressed4();
-    void customButtonPressed5();
-    void customButtonPressed6();
+    // CustomButtonController handles all custom button logic
     void playerShow();
     void playerHide();
     void updateBG();
@@ -188,6 +192,7 @@ private slots:
     void on_pushButtonAlbum_clicked();
 
 private:
+    CustomButtonController* customButtonController;
     Ui::MainWindow* ui_;
     configuration::IConfiguration::Pointer configuration_;
     configuration::SystemPaths::Pointer systemPaths_;
@@ -202,26 +207,7 @@ private:
     QString bversion;
     QString bdate;
 
-    QString custom_button_command_c1;
-    QString custom_button_command_c2;
-    QString custom_button_command_c3;
-    QString custom_button_command_c4;
-    QString custom_button_command_c5;
-    QString custom_button_command_c6;
-
-    QString custom_button_file_c1;
-    QString custom_button_file_c2;
-    QString custom_button_file_c3;
-    QString custom_button_file_c4;
-    QString custom_button_file_c5;
-    QString custom_button_file_c6;
-
-    QString custom_button_color_c1 = "186,189,192";
-    QString custom_button_color_c2 = "186,189,192";
-    QString custom_button_color_c3 = "186,189,192";
-    QString custom_button_color_c4 = "186,189,192";
-    QString custom_button_color_c5 = "186,189,192";
-    QString custom_button_color_c6 = "186,189,192";
+    // Custom button config now handled by CustomButtonController
 
     QString selectedMp3file;
     QString date_text;
