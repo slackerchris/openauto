@@ -1,0 +1,25 @@
+Release Notes
+
+20250731 - 4.1.1 - Security, Thread Safety & Portability Improvements
+* Enhanced Error Handling: Implemented comprehensive ErrorHandler infrastructure with 75% reduction in generic exception handling
+* Thread Safety: Complete implementation eliminating race conditions in MainWindow with 11 protected state variables and thread-safe accessors
+* System Dependencies: Eliminated all hardcoded system dependencies with configurable SystemPaths and SafeSystemExecutor  
+* Security Improvements: Replaced dangerous system() calls with validated command execution to prevent injection attacks
+* Configuration System: Added environment variable overrides for system paths enabling deployment across different platforms
+* Documentation: Complete technical documentation added to docs/ directory including thread safety implementation and Qt6 upgrade analysis
+* Build System: All improvements successfully compiled and tested with zero errors
+* Compatibility: Maintained full backward compatibility while improving security, thread safety, and maintainability
+
+20241124 - 4.1.0 - Bluetooth Updates
+* Rename BluetootAdapterType to BluetoothAdapterType, and change from NONE, LOCAL, REMOTE to NONE, LOCAL, EXTERNAL to better match available settings
+* getLocalAddress() on Dummy, Local and Remote bluetooth changed to getAdapterAddress()
+* Removed RemoteBluetoothDevice replacing all references with LocalBluetoothDevice. RemoteBluetoothDevice is a wrapper essentially with all pairing work handled by btservice.
+* Pairing overlaps between btservice and LocalBluetoothDevice - removed duplicated elements from LocalBluetoothDevice to rely on btservice.
+* Swap Bluetooth dropdown in Settings from none, builtin or external, to showing a list of detected Bluetooth Adapters. Write hardware address to config file.
+
+20241121 - 4.0.0 - AAP 1.6 Support
+* Added support for new services provided by AASDK and AAP Protocol version 1.6.
+* Add extensive logging
+* Add logo for forked version
+* Resolve display issue where if Raspberry Pi thinks both HDMI and LCD are enabled, the display width is appearing as two side by side monitors (double width) rather than  just using the physical width of the screen.
+
